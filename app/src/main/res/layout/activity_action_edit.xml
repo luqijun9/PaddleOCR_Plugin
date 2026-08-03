@@ -53,4 +53,13 @@
         android:text="此插件将自动截取当前屏幕，并识别文字。如果找到了目标文本，会返回中心坐标。可以通过 Tasker 变量 %ocr_full_text, %match_found, %match_center_x, %match_center_y 获取结果。"
         android:textSize="14sp"
         android:textColor="#666666" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textIsSelectable="true"
+        android:text="💡 免弹窗截图：\n如果您有 Root 或 Shizuku，可通过执行以下 ADB 命令隐式授予录屏权限，从此使用“录屏权限”模式不再有确认弹窗：\nappops set com.paddle.ocr.demo PROJECT_MEDIA allow"
+        android:textSize="13sp"
+        android:textColor="#666666" />
 </LinearLayout>

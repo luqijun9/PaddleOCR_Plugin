@@ -11,6 +11,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Toast
+import androidx.core.view.WindowCompat
 import com.paddle.ocr.demo.R
 
 class ActionEditActivity : Activity() {
@@ -25,6 +26,7 @@ class ActionEditActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_action_edit)
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
 
         editTargetText = findViewById(R.id.editTargetText)
         checkIsRegex = findViewById(R.id.checkIsRegex)
