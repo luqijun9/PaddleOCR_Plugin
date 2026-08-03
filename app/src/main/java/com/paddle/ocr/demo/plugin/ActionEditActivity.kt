@@ -52,16 +52,10 @@ class ActionEditActivity : Activity() {
             "%match_center_x\n目标X坐标\n匹配文本的中心点X轴坐标",
             "%match_center_y\n目标Y坐标\n匹配文本的中心点Y轴坐标"
         )
-        // IMPORTANT: Tasker expects RELEVANT_VARIABLES on the resultIntent to show the UI
-        if (TaskerPluginConstants.EXTRA_RELEVANT_VARIABLES.isNotEmpty()) {
-            resultIntent.putExtra(TaskerPluginConstants.EXTRA_RELEVANT_VARIABLES, variables)
-        }
-        
-        // Also tell Tasker to replace variables in our Target Text before sending it to us
-        resultBundle.putStringArray(
-            "net.dinglisch.android.tasker.extras.VARIABLE_REPLACE_KEYS", 
-            arrayOf(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT)
-        )
+        TaskerPlugin.addRelevantVariableList(resultIntent, variables)
+
+        // Tell Tasker to replace variables in our Target Text before sending it to us
+        TaskerPlugin.Setting.setVariableReplaceKeys(resultBundle, arrayOf(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT))
 
         // 请求宿主等待较长时间（120秒），因为需要用户点击授权对话框 + OCR 识别
         // TaskerPlugin API 要求单位是毫秒

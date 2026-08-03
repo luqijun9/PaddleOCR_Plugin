@@ -1,21 +1,17 @@
 package com.paddle.ocr.demo.plugin
 
 object TaskerPluginConstants {
+    // Locale plugin standard actions
     const val ACTION_FIRE_SETTING = "com.twofortyfouram.locale.intent.action.FIRE_SETTING"
     const val ACTION_EDIT_SETTING = "com.twofortyfouram.locale.intent.action.EDIT_SETTING"
-    
+
+    // Locale plugin standard extras
     const val EXTRA_BUNDLE = "com.twofortyfouram.locale.intent.extra.BUNDLE"
     const val EXTRA_STRING_BLURB = "com.twofortyfouram.locale.intent.extra.BLURB"
-    const val EXTRA_VARIABLES = "net.dinglisch.android.tasker.extras.VARIABLES"
-    const val EXTRA_RELEVANT_VARIABLES = "net.dinglisch.android.tasker.RELEVANT_VARIABLES"
-    const val EXTRA_REQUESTED_TIMEOUT = "net.dinglisch.android.tasker.extras.REQUESTED_TIMEOUT"
-    
-    // Completion intent keys
+
+    // Tasker completion intent (private in TaskerPlugin.java, needed for debug logging)
     const val EXTRA_PLUGIN_COMPLETION_INTENT = "net.dinglisch.android.tasker.extras.COMPLETION_INTENT"
-    const val EXTRA_RESULT_CODE = "net.dinglisch.android.tasker.extras.RESULT_CODE"
-    const val RESULT_CODE_OK = -1
-    const val RESULT_CODE_FAILED = 2
-    
+
     // Our custom bundle keys
     const val BUNDLE_KEY_TARGET_TEXT = "target_text"
     const val BUNDLE_KEY_IS_REGEX = "is_regex"

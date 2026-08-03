@@ -256,14 +256,9 @@ class ScreenCaptureService : Service() {
                 putString("%ocr_full_text", fullTextStr)
                 putString("%ocr_json", jsonStr)
                 putString("%match_found", matchFound.toString())
-                putString("ocr_full_text", fullTextStr)
-                putString("ocr_json", jsonStr)
-                putString("match_found", matchFound.toString())
                 if (matchFound) {
                     putString("%match_center_x", matchCenterX.toString())
                     putString("%match_center_y", matchCenterY.toString())
-                    putString("match_center_x", matchCenterX.toString())
-                    putString("match_center_y", matchCenterY.toString())
                 }
             }
             log("varsBundle created with keys: ${bundle.keySet()}")
