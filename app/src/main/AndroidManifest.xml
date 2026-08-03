@@ -53,6 +53,8 @@
         <activity
             android:name=".plugin.ScreenCaptureActivity"
             android:theme="@style/Theme.Transparent"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
             android:exported="false" />
 
         <service
