@@ -19,7 +19,7 @@ class ScreenCaptureActivity : Activity() {
     private var targetText: String = ""
     private var isRegex: Boolean = false
     private var isExactMatch: Boolean = false
-    private var isIgnoreCase: Boolean = false
+    private var isIgnoreCase: Boolean = true
     private var fireIntent: Intent? = null
     private var isAppTest: Boolean = false
 
@@ -33,7 +33,7 @@ class ScreenCaptureActivity : Activity() {
         targetText = intent.getStringExtra("targetText") ?: ""
         isRegex = intent.getBooleanExtra("isRegex", false)
         isExactMatch = intent.getBooleanExtra("isExactMatch", false)
-        isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", false)
+        isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", true)
         fireIntent = intent.getParcelableExtra("fireIntent")
         isAppTest = intent.getBooleanExtra("isAppTest", false)
         log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, isAppTest=$isAppTest")

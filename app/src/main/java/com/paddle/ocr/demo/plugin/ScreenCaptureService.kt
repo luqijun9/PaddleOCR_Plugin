@@ -72,7 +72,7 @@ class ScreenCaptureService : Service() {
         val targetText = intent.getStringExtra("targetText") ?: ""
         val isRegex = intent.getBooleanExtra("isRegex", false)
         val isExactMatch = intent.getBooleanExtra("isExactMatch", false)
-        val isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", false)
+        val isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", true)
         val filePath = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH)
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 

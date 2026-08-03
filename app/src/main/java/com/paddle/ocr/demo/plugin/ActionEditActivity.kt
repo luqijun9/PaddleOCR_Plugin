@@ -43,7 +43,7 @@ class ActionEditActivity : ComponentActivity() {
         var initialTargetText = ""
         var initialIsRegex = false
         var initialIsExactMatch = false
-        var initialIsIgnoreCase = false
+        var initialIsIgnoreCase = true
         var initialCaptureMode = TaskerPluginConstants.MODE_MEDIA_PROJECTION
         var initialFilePath = ""
 
@@ -53,7 +53,8 @@ class ActionEditActivity : ComponentActivity() {
                 initialTargetText = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, "")
                 initialIsRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
                 initialIsExactMatch = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, false)
-                initialIsIgnoreCase = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, false)
+                // Default to true if the key is not in the bundle
+                initialIsIgnoreCase = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, true)
                 initialCaptureMode = bundle.getInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, TaskerPluginConstants.MODE_MEDIA_PROJECTION)
                 initialFilePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, "")
             }
@@ -405,7 +406,7 @@ fun ActionEditScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "忽略大小写",
+                            text = "不区分大小写",
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
