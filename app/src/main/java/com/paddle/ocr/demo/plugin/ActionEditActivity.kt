@@ -177,7 +177,7 @@ fun ActionEditScreen(
         galleryLauncher.launch(arrayOf("image/*"))
     }
 
-    val modeOptions = listOf("录屏权限 (会闪一下黑屏)", "无障碍服务 (静默无感)", "指定文件路径 (本地图片)")
+    val modeOptions = listOf("录屏权限 (需要授权)", "无障碍服务 (需要授权)", "指定文件路径 (本地图片)")
 
     Scaffold(
         topBar = {
