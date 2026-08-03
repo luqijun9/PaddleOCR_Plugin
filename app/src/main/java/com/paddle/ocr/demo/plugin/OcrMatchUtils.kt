@@ -29,14 +29,15 @@ object OcrMatchUtils {
             val jsonObj = JSONObject()
             jsonObj.put("text", ocrResult.text)
             jsonObj.put("confidence", ocrResult.confidence)
-            val boxArr = JSONArray()
-            ocrResult.box.points.forEach { point ->
-                val pointObj = JSONObject()
-                pointObj.put("x", point.x)
-                pointObj.put("y", point.y)
-                boxArr.put(pointObj)
-            }
-            jsonObj.put("box", boxArr)
+            val tl = ocrResult.box.points[0]
+            val br = ocrResult.box.points[2]
+            
+            jsonObj.put("startX", tl.x)
+            jsonObj.put("startY", tl.y)
+            jsonObj.put("endX", br.x)
+            jsonObj.put("endY", br.y)
+            jsonObj.put("centerX", (tl.x + br.x) / 2f)
+            jsonObj.put("centerY", (tl.y + br.y) / 2f)
             jsonArray.put(jsonObj)
 
             // Check for target text
