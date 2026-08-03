@@ -64,7 +64,8 @@ class ActionEditActivity : Activity() {
         )
 
         // Tell Tasker we request a timeout UI, default to 10 seconds (10000 ms)
-        resultIntent.putExtra(TaskerPluginConstants.EXTRA_REQUESTED_TIMEOUT, 10000)
+        // Tasker actually expects this value in seconds
+        resultIntent.putExtra(TaskerPluginConstants.EXTRA_REQUESTED_TIMEOUT, 10)
 
         setResult(Activity.RESULT_OK, resultIntent)
         super.finish()

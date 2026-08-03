@@ -22,6 +22,7 @@ class ScreenCaptureActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FileLogger.log(this, TAG, "onCreate called")
         // Make activity transparent (needs theme in Manifest)
         
         targetText = intent.getStringExtra("targetText") ?: ""
@@ -38,6 +39,7 @@ class ScreenCaptureActivity : Activity() {
         if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
             if (resultCode == RESULT_OK && data != null) {
                 Log.d(TAG, "Screen capture permission granted.")
+                FileLogger.log(this, TAG, "Screen capture permission granted. Starting service...")
                 val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
                     putExtra("resultCode", resultCode)
                     putExtra("data", data)
@@ -50,6 +52,7 @@ class ScreenCaptureActivity : Activity() {
                 startForegroundService(serviceIntent)
             } else {
                 Log.e(TAG, "Screen capture permission denied.")
+                FileLogger.log(this, TAG, "Screen capture permission denied.")
                 // Should signal Tasker error
                 signalTaskerFinish(false)
             }
@@ -70,6 +73,7 @@ class ScreenCaptureActivity : Activity() {
         } else {
             resultIntent.putExtra("net.dinglisch.android.tasker.extras.SIGNAL_STATE", 1) // OK
         }
+        FileLogger.log(this, TAG, "Sending ACTION_EDIT_EVENT_SIGNAL_FINISH. success=$success")
         sendBroadcast(resultIntent)
     }
 }

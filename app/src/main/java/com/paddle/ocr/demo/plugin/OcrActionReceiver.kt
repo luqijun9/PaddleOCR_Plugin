@@ -8,13 +8,14 @@ import android.util.Log
 class OcrActionReceiver : BroadcastReceiver() {
     companion object {
         const val TAG = "OcrActionReceiver"
-        const val RESULT_CODE_PENDING = 17
+        const val RESULT_CODE_PENDING = android.app.Activity.RESULT_FIRST_USER + 2
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != TaskerPluginConstants.ACTION_FIRE_SETTING) return
         
         Log.d(TAG, "Received FIRE_SETTING from Tasker")
+        FileLogger.log(context, TAG, "Received FIRE_SETTING from Tasker. isOrderedBroadcast=$isOrderedBroadcast")
 
         val bundle = intent.getBundleExtra(TaskerPluginConstants.EXTRA_BUNDLE)
         val targetText = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT) ?: ""
@@ -34,6 +35,7 @@ class OcrActionReceiver : BroadcastReceiver() {
             // Pass the original intent so the service knows how to signal finish
             putExtra("fireIntent", intent)
         }
+        FileLogger.log(context, TAG, "Starting ScreenCaptureActivity with targetText=$targetText, isRegex=$isRegex")
         context.startActivity(captureIntent)
     }
 }

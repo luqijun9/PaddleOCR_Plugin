@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import android.content.ComponentName
 
 class ScreenCaptureService : Service() {
 
@@ -57,6 +58,7 @@ class ScreenCaptureService : Service() {
 
     @SuppressLint("WrongConstant")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        FileLogger.log(this, TAG, "onStartCommand called")
         if (intent == null) {
             stopSelf()
             return START_NOT_STICKY
@@ -130,10 +132,13 @@ class ScreenCaptureService : Service() {
                 virtualDisplay?.release()
                 mediaProjection?.stop()
 
+                FileLogger.log(this@ScreenCaptureService, TAG, "Screen captured successfully. Starting OCR.")
                 scope.launch {
                     processOcr(croppedBitmap, targetText, isRegex, fireIntent, isAppTest)
                     stopSelf()
                 }
+            } else {
+                FileLogger.log(this@ScreenCaptureService, TAG, "Failed to capture image (image is null)")
             }
         }, null)
     }
@@ -190,16 +195,32 @@ class ScreenCaptureService : Service() {
             }
 
             val bundle = Bundle().apply {
-                putString("%ocr_full_text", fullTextBuilder.toString().trimEnd())
-                putString("%ocr_json", jsonArray.toString())
-                putBoolean("%match_found", matchFound)
+                val fullTextStr = fullTextBuilder.toString().trimEnd()
+                val jsonStr = jsonArray.toString()
+                val matchStr = matchFound.toString()
+                
+                // with %
+                putString("%ocr_full_text", fullTextStr)
+                putString("%ocr_json", jsonStr)
+                putString("%match_found", matchStr)
+                
+                // without % (Tasker docs actually say no %)
+                putString("ocr_full_text", fullTextStr)
+                putString("ocr_json", jsonStr)
+                putString("match_found", matchStr)
+                
                 if (matchFound) {
-                    putFloat("%match_center_x", matchCenterX)
-                    putFloat("%match_center_y", matchCenterY)
+                    val centerXStr = matchCenterX.toString()
+                    val centerYStr = matchCenterY.toString()
+                    putString("%match_center_x", centerXStr)
+                    putString("%match_center_y", centerYStr)
+                    putString("match_center_x", centerXStr)
+                    putString("match_center_y", centerYStr)
                 }
             }
 
             Log.d(TAG, "OCR finished. Result length: ${fullTextBuilder.length}, matchFound: $matchFound")
+            FileLogger.log(this, TAG, "OCR finished. matchFound: $matchFound, isAppTest: $isAppTest")
             if (isAppTest) {
                 OCRApplication.instance.appTestResult.emit(Pair(bitmap, result))
             } else {
@@ -208,6 +229,7 @@ class ScreenCaptureService : Service() {
 
         } catch (e: Exception) {
             Log.e(TAG, "OCR processing failed", e)
+            FileLogger.log(this, TAG, "OCR processing failed: ${e.message}")
             if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
         }
     }
@@ -228,8 +250,23 @@ class ScreenCaptureService : Service() {
                 }
                 
                 // For Tasker Android 8+ background limits, we might need to start a service or broadcast
-                // Tasker's completion intents are typically Broadcasts.
-                sendBroadcast(completionIntent)
+                val callServicePackage = completionIntent.getStringExtra("net.dinglisch.android.tasker.EXTRA_CALL_SERVICE_PACKAGE")
+                val callService = completionIntent.getStringExtra("net.dinglisch.android.tasker.EXTRA_CALL_SERVICE")
+                val foreground = completionIntent.getBooleanExtra("net.dinglisch.android.tasker.EXTRA_CALL_SERVICE_FOREGROUND", false)
+                
+                if (callServicePackage != null && callService != null) {
+                    completionIntent.component = ComponentName(callServicePackage, callService)
+                    FileLogger.log(this, TAG, "signaling Tasker via Service: $callServicePackage / $callService (foreground=$foreground)")
+                    if (foreground && android.os.Build.VERSION.SDK_INT >= 26) {
+                        startForegroundService(completionIntent)
+                    } else {
+                        startService(completionIntent)
+                    }
+                } else {
+                    FileLogger.log(this, TAG, "signaling Tasker via Broadcast")
+                    completionIntent.setPackage("net.dinglisch.android.taskerm") // Force explicit broadcast for Android 8+ limits
+                    sendBroadcast(completionIntent)
+                }
                 
                 // Show a Toast so the user knows what happened
                 Handler(Looper.getMainLooper()).post {
