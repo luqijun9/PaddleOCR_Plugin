@@ -19,8 +19,8 @@ object OcrMatchUtils {
         val fullTextBuilder = StringBuilder()
         val jsonArray = JSONArray()
         var matchFound = false
-        var matchCenterX = 0f
-        var matchCenterY = 0f
+        var matchCenterX = 0
+        var matchCenterY = 0
 
         result.results.forEachIndexed { i, ocrResult ->
             fullTextBuilder.append(ocrResult.text).append("\n")
@@ -32,12 +32,13 @@ object OcrMatchUtils {
             val tl = ocrResult.box.points[0]
             val br = ocrResult.box.points[2]
             
-            jsonObj.put("startX", tl.x)
-            jsonObj.put("startY", tl.y)
-            jsonObj.put("endX", br.x)
-            jsonObj.put("endY", br.y)
-            jsonObj.put("centerX", (tl.x + br.x) / 2f)
-            jsonObj.put("centerY", (tl.y + br.y) / 2f)
+            jsonObj.put("startX", tl.x.toInt())
+            jsonObj.put("startY", tl.y.toInt())
+            jsonObj.put("endX", br.x.toInt())
+            jsonObj.put("endY", br.y.toInt())
+            jsonObj.put("centerX", ((tl.x + br.x) / 2f).toInt())
+            jsonObj.put("centerY", ((tl.y + br.y) / 2f).toInt())
+            jsonObj.put("bounds", "(${tl.x.toInt()}, ${tl.y.toInt()}) - (${br.x.toInt()}, ${br.y.toInt()})")
             jsonArray.put(jsonObj)
 
             // Check for target text
@@ -60,8 +61,8 @@ object OcrMatchUtils {
                     matchFound = true
                     val tl = ocrResult.box.points[0]
                     val br = ocrResult.box.points[2]
-                    matchCenterX = (tl.x + br.x) / 2f
-                    matchCenterY = (tl.y + br.y) / 2f
+                    matchCenterX = ((tl.x + br.x) / 2f).toInt()
+                    matchCenterY = ((tl.y + br.y) / 2f).toInt()
                     Log.d(TAG, "  centerX=$matchCenterX, centerY=$matchCenterY")
                 }
             }
