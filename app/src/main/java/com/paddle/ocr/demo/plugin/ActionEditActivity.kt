@@ -1,5 +1,14 @@
 package com.paddle.ocr.demo.plugin
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.MediaStore
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.core.content.ContextCompat
 import android.app.Activity
 import android.content.Intent
 import android.os.Build
@@ -109,6 +118,22 @@ class ActionEditActivity : ComponentActivity() {
     }
 }
 
+fun getRealPathFromUri(context: Context, uri: Uri): String? {
+    var realPath: String? = null
+    try {
+        val projection = arrayOf(MediaStore.Images.Media.DATA)
+        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+                realPath = cursor.getString(columnIndex)
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return realPath
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionEditScreen(
@@ -123,6 +148,29 @@ fun ActionEditScreen(
     var isRegex by remember { mutableStateOf(initialIsRegex) }
     var captureMode by remember { mutableStateOf(initialCaptureMode) }
     var filePath by remember { mutableStateOf(initialFilePath) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            val realPath = getRealPathFromUri(context, it)
+            if (realPath != null) {
+                filePath = realPath
+            } else {
+                Toast.makeText(context, "无法获取文件的绝对路径，请手动输入", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.entries.all { it.value }
+        if (!allGranted) {
+            Toast.makeText(context, "未授予存储权限，Tasker 可能无法读取本地图片文件", Toast.LENGTH_SHORT).show()
+        }
+        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
 
     val modeOptions = listOf("录屏权限 (会闪一下黑屏)", "无障碍服务 (静默无感)", "指定文件路径 (本地图片)")
 
@@ -210,13 +258,38 @@ fun ActionEditScreen(
 
                     if (captureMode == TaskerPluginConstants.MODE_FILE_PATH) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedTextField(
-                            value = filePath,
-                            onValueChange = { filePath = it },
-                            label = { Text("图片文件绝对路径") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = filePath,
+                                onValueChange = { filePath = it },
+                                label = { Text("图片文件绝对路径") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            FilledTonalButton(
+                                onClick = { 
+                                    val permissionsToRequest = mutableListOf<String>()
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                                            permissionsToRequest.add(Manifest.permission.READ_MEDIA_IMAGES)
+                                        }
+                                    } else {
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                                            permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                                        }
+                                    }
+                                    if (permissionsToRequest.isNotEmpty()) {
+                                        permissionLauncher.launch(permissionsToRequest.toTypedArray())
+                                    } else {
+                                        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                    }
+                                },
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Text("浏览文件")
+                            }
+                        }
                     }
                 }
             }
