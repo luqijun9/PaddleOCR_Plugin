@@ -12,13 +12,13 @@ import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.media.Image
 import android.media.ImageReader
-import android.os.Handler
-import android.os.Looper
+import android.os.IBinder
 import android.widget.Toast
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
-import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
@@ -26,15 +26,14 @@ import com.paddle.ocr.demo.OCRApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import android.content.ComponentName
 
 class ScreenCaptureService : Service() {
 
     companion object {
-        const val TAG = "ScreenCaptureService"
+        const val TAG = "OcrPlugin"
+        const val SUB_TAG = "Service"
         const val NOTIFICATION_ID = 101
         const val CHANNEL_ID = "ScreenCaptureChannel"
     }
@@ -47,6 +46,7 @@ class ScreenCaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        log("=== onCreate ===")
         createNotificationChannel()
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Tasker OCR")
@@ -54,26 +54,51 @@ class ScreenCaptureService : Service() {
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .build()
         startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+        log("foreground notification started")
     }
 
     @SuppressLint("WrongConstant")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        FileLogger.log(this, TAG, "onStartCommand called")
+        log("=== onStartCommand ===")
+        log("intent=$intent, flags=$flags, startId=$startId")
+        
         if (intent == null) {
+            log("intent is NULL, stopping self")
             stopSelf()
             return START_NOT_STICKY
         }
 
-        val resultCode = intent.getIntExtra("resultCode", 0)
-        val data: Intent = intent.getParcelableExtra("data") ?: return START_NOT_STICKY
+        val resultCode = intent.getIntExtra("resultCode", -1)
+        val data: Intent = intent.getParcelableExtra("data") ?: run {
+            log("data is NULL, stopping self")
+            return START_NOT_STICKY
+        }
         val targetText = intent.getStringExtra("targetText") ?: ""
         val isRegex = intent.getBooleanExtra("isRegex", false)
         val fireIntent: Intent? = intent.getParcelableExtra("fireIntent")
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
+        log("resultCode=$resultCode")
+        log("targetText=$targetText, isRegex=$isRegex, isAppTest=$isAppTest")
+        log("data action=${data.action}")
+
+        if (fireIntent != null) {
+            log("fireIntent action=${fireIntent.action}")
+            log("fireIntent extras keys=${fireIntent.extras?.keySet()}")
+            val completionStr = fireIntent.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
+            log("fireIntent hasCompletionIntent=${completionStr != null}")
+            if (completionStr != null) {
+                log("fireIntent completionIntentStr=$completionStr")
+            }
+        } else {
+            log("fireIntent is NULL!")
+        }
+
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = projectionManager.getMediaProjection(resultCode, data)
+        log("mediaProjection created: ${mediaProjection != null}")
 
+        log("calling captureScreenAndOcr")
         captureScreenAndOcr(targetText, isRegex, fireIntent, isAppTest)
 
         return START_NOT_STICKY
@@ -81,36 +106,46 @@ class ScreenCaptureService : Service() {
 
     @SuppressLint("WrongConstant")
     private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
+        log("=== captureScreenAndOcr ===")
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
         windowManager.defaultDisplay.getRealMetrics(metrics)
         val width = metrics.widthPixels
         val height = metrics.heightPixels
         val density = metrics.densityDpi
+        log("display: ${width}x${height} @ ${density}dpi")
 
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-        
+        log("imageReader created")
+
         mediaProjection?.registerCallback(object : MediaProjection.Callback() {
             override fun onStop() {
+                log("MediaProjection onStop")
                 super.onStop()
                 mediaProjection?.unregisterCallback(this)
             }
         }, null)
 
+        log("creating virtual display...")
         val virtualDisplay = mediaProjection?.createVirtualDisplay(
             "ScreenCapture",
             width, height, density,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
             imageReader?.surface, null, null
         )
+        log("virtualDisplay created: ${virtualDisplay != null}")
 
         imageReader?.setOnImageAvailableListener({ reader ->
+            log("=== onImageAvailable ===")
             val image: Image? = try {
                 reader.acquireLatestImage()
             } catch (e: Exception) {
+                log("acquireLatestImage exception: ${e.message}")
                 null
             }
+            
             if (image != null) {
+                log("image acquired successfully")
                 // Remove listener so we only get one frame
                 imageReader?.setOnImageAvailableListener(null, null)
 
@@ -119,6 +154,7 @@ class ScreenCaptureService : Service() {
                 val pixelStride = planes[0].pixelStride
                 val rowStride = planes[0].rowStride
                 val rowPadding = rowStride - pixelStride * width
+                log("image planes: ${planes.size}, rowStride=$rowStride, pixelStride=$pixelStride")
 
                 val bitmap = Bitmap.createBitmap(
                     width + rowPadding / pixelStride,
@@ -128,41 +164,58 @@ class ScreenCaptureService : Service() {
                 bitmap.copyPixelsFromBuffer(buffer)
                 val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
                 image.close()
+                log("bitmap created: ${croppedBitmap.width}x${croppedBitmap.height}")
 
                 virtualDisplay?.release()
                 mediaProjection?.stop()
+                log("virtualDisplay released, mediaProjection stopped")
 
-                FileLogger.log(this@ScreenCaptureService, TAG, "Screen captured successfully. Starting OCR.")
+                log("launching coroutine for OCR processing")
                 scope.launch {
                     processOcr(croppedBitmap, targetText, isRegex, fireIntent, isAppTest)
+                    log("OCR processing done, calling stopSelf")
                     stopSelf()
                 }
             } else {
-                FileLogger.log(this@ScreenCaptureService, TAG, "Failed to capture image (image is null)")
+                log("IMAGE IS NULL - screen capture failed!")
+                scope.launch {
+                    signalTaskerFinish(fireIntent, false, Bundle())
+                    stopSelf()
+                }
             }
         }, null)
+        log("onImageAvailable listener registered")
     }
 
     private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
+        log("=== processOcr ===")
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
-            Log.e(TAG, "OCR Engine not initialized!")
+            log("OCR ENGINE IS NULL - not initialized!")
             if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
             return
         }
+        log("OCR engine available")
 
         try {
+            log("calling ocrEngine.recognize()...")
             val result = ocrEngine.recognize(bitmap)
-            
+            log("recognize() returned. results count: ${result.results.size}")
+
+            if (result.results.isEmpty()) {
+                log("NO OCR RESULTS FOUND")
+            }
+
             val fullTextBuilder = StringBuilder()
             val jsonArray = JSONArray()
             var matchFound = false
             var matchCenterX = 0f
             var matchCenterY = 0f
 
-            result.results.forEach { ocrResult ->
+            result.results.forEachIndexed { i, ocrResult ->
                 fullTextBuilder.append(ocrResult.text).append("\n")
-                
+                log("  result[$i]: text='${ocrResult.text}' confidence=${ocrResult.confidence}")
+
                 val jsonObj = JSONObject()
                 jsonObj.put("text", ocrResult.text)
                 jsonObj.put("confidence", ocrResult.confidence)
@@ -184,102 +237,135 @@ class ScreenCaptureService : Service() {
                         ocrResult.text.contains(targetText)
                     }
                     if (isMatch) {
+                        log("MATCH FOUND in result[$i]!")
                         matchFound = true
-                        // Calculate center point (average of 4 corners, or just tl and br)
                         val tl = ocrResult.box.points[0]
                         val br = ocrResult.box.points[2]
                         matchCenterX = (tl.x + br.x) / 2f
                         matchCenterY = (tl.y + br.y) / 2f
+                        log("  centerX=$matchCenterX, centerY=$matchCenterY")
                     }
                 }
             }
 
+            val fullTextStr = fullTextBuilder.toString().trimEnd()
+            val jsonStr = jsonArray.toString()
+            log("fullText length=${fullTextStr.length}, json length=${jsonStr.length}, matchFound=$matchFound")
+
             val bundle = Bundle().apply {
-                val fullTextStr = fullTextBuilder.toString().trimEnd()
-                val jsonStr = jsonArray.toString()
-                val matchStr = matchFound.toString()
-                
-                // with %
                 putString("%ocr_full_text", fullTextStr)
                 putString("%ocr_json", jsonStr)
-                putString("%match_found", matchStr)
-                
-                // without % (Tasker docs actually say no %)
+                putString("%match_found", matchFound.toString())
                 putString("ocr_full_text", fullTextStr)
                 putString("ocr_json", jsonStr)
-                putString("match_found", matchStr)
-                
+                putString("match_found", matchFound.toString())
                 if (matchFound) {
-                    val centerXStr = matchCenterX.toString()
-                    val centerYStr = matchCenterY.toString()
-                    putString("%match_center_x", centerXStr)
-                    putString("%match_center_y", centerYStr)
-                    putString("match_center_x", centerXStr)
-                    putString("match_center_y", centerYStr)
+                    putString("%match_center_x", matchCenterX.toString())
+                    putString("%match_center_y", matchCenterY.toString())
+                    putString("match_center_x", matchCenterX.toString())
+                    putString("match_center_y", matchCenterY.toString())
                 }
             }
+            log("varsBundle created with keys: ${bundle.keySet()}")
 
-            Log.d(TAG, "OCR finished. Result length: ${fullTextBuilder.length}, matchFound: $matchFound")
-            FileLogger.log(this, TAG, "OCR finished. matchFound: $matchFound, isAppTest: $isAppTest")
             if (isAppTest) {
+                log("isAppTest=true, emitting result instead of signaling Tasker")
                 OCRApplication.instance.appTestResult.emit(Pair(bitmap, result))
             } else {
+                log("calling signalTaskerFinish with success=true")
                 signalTaskerFinish(fireIntent, true, bundle)
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "OCR processing failed", e)
-            FileLogger.log(this, TAG, "OCR processing failed: ${e.message}")
+            log("OCR EXCEPTION: ${e.message}")
+            Log.e(TAG, "[$SUB_TAG] OCR processing failed", e)
             if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
         }
     }
 
     private fun signalTaskerFinish(fireIntent: Intent?, success: Boolean, varsBundle: Bundle) {
-        if (fireIntent == null) return
+        log("=== signalTaskerFinish ===")
+        log("fireIntent=$fireIntent, success=$success, varsBundleKeys=${varsBundle.keySet()}")
         
-        val completionIntentString = fireIntent.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
-        if (completionIntentString != null) {
+        if (fireIntent == null) {
+            log("fireIntent is null, CANNOT signal Tasker!")
+            return
+        }
+
+        val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
+        log("resultCode=$resultCode")
+
+        // === 方案1：尝试使用信号 API ===
+        log("=== APPROACH 1: signalFinish via TaskerPlugin API ===")
+        val signaled1 = TaskerPlugin.Setting.signalFinish(this, fireIntent, resultCode, varsBundle)
+        log("signalFinish returned: signaled1=$signaled1")
+
+        // === 方案2：手动构建并发送 completion intent ===
+        log("=== APPROACH 2: Manual broadcast ===")
+        val completionIntentStr = fireIntent.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
+        log("completionIntentStr: ${completionIntentStr?.take(100)}...")
+        
+        if (completionIntentStr != null) {
             try {
-                val completionIntent = Intent.parseUri(completionIntentString, Intent.URI_INTENT_SCHEME)
-                
-                val resultCode = if (success) TaskerPluginConstants.RESULT_CODE_OK else TaskerPluginConstants.RESULT_CODE_FAILED
+                val completionIntent = Intent.parseUri(completionIntentStr, Intent.URI_INTENT_SCHEME)
+                log("parsed completionIntent:")
+                log("  action=${completionIntent.action}")
+                log("  component=${completionIntent.component}")
+                log("  data=${completionIntent.data}")
+                log("  extras keys=${completionIntent.extras?.keySet()}")
+
+                // 打印 extras 值
+                completionIntent.extras?.keySet()?.forEach { key ->
+                    log("    extra: $key = ${completionIntent.extras?.get(key)}")
+                }
+
+                // 添加 resultCode 和 variables
                 completionIntent.putExtra(TaskerPluginConstants.EXTRA_RESULT_CODE, resultCode)
+                completionIntent.putExtra(TaskerPluginConstants.EXTRA_VARIABLES, varsBundle)
+
+                log("after adding extras:")
+                log("  EXTRA_RESULT_CODE=$resultCode")
+                log("  EXTRA_VARIABLES has %ocr_full_text=${varsBundle.containsKey("%ocr_full_text")}")
+
+                // Android 14+ 需要标志
+                completionIntent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+
+                log("sending broadcast...")
+                sendBroadcast(completionIntent)
+                log("broadcast sent successfully (manual approach 2)")
                 
-                if (success) {
-                    completionIntent.putExtra(TaskerPluginConstants.EXTRA_VARIABLES, varsBundle)
-                }
+                // === 方案3：也通过 application context 发送 ===
+                log("=== APPROACH 3: broadcast via applicationContext ===")
+                val appCompletionIntent = Intent.parseUri(completionIntentStr, Intent.URI_INTENT_SCHEME)
+                appCompletionIntent.putExtra(TaskerPluginConstants.EXTRA_RESULT_CODE, resultCode)
+                appCompletionIntent.putExtra(TaskerPluginConstants.EXTRA_VARIABLES, varsBundle)
+                appCompletionIntent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+                applicationContext.sendBroadcast(appCompletionIntent)
+                log("broadcast via applicationContext sent successfully")
                 
-                // For Tasker Android 8+ background limits, we might need to start a service or broadcast
-                val callServicePackage = completionIntent.getStringExtra("net.dinglisch.android.tasker.EXTRA_CALL_SERVICE_PACKAGE")
-                val callService = completionIntent.getStringExtra("net.dinglisch.android.tasker.EXTRA_CALL_SERVICE")
-                val foreground = completionIntent.getBooleanExtra("net.dinglisch.android.tasker.EXTRA_CALL_SERVICE_FOREGROUND", false)
-                
-                if (callServicePackage != null && callService != null) {
-                    completionIntent.component = ComponentName(callServicePackage, callService)
-                    FileLogger.log(this, TAG, "signaling Tasker via Service: $callServicePackage / $callService (foreground=$foreground)")
-                    if (foreground && android.os.Build.VERSION.SDK_INT >= 26) {
-                        startForegroundService(completionIntent)
-                    } else {
-                        startService(completionIntent)
-                    }
-                } else {
-                    FileLogger.log(this, TAG, "signaling Tasker via Broadcast")
-                    completionIntent.setPackage("net.dinglisch.android.taskerm") // Force explicit broadcast for Android 8+ limits
-                    sendBroadcast(completionIntent)
-                }
-                
-                // Show a Toast so the user knows what happened
-                Handler(Looper.getMainLooper()).post {
-                    if (success) {
-                        Toast.makeText(this, "OCR完成，已返回变量到Tasker", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this, "OCR失败或未匹配", Toast.LENGTH_SHORT).show()
-                    }
-                }
             } catch (e: Exception) {
+                log("EXCEPTION in manual broadcast: ${e.message}")
                 e.printStackTrace()
             }
+        } else {
+            log("completionIntentStr is NULL - cannot build manual intent!")
+            log("All fireIntent extras: ${fireIntent.extras?.keySet()}")
         }
+
+        Handler(Looper.getMainLooper()).post {
+            if (success) {
+                Toast.makeText(this, "OCR完成，已返回变量到Tasker", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "OCR失败或未匹配", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        log("=== onDestroy ===")
+        imageReader?.close()
+        mediaProjection?.stop()
     }
 
     private fun createNotificationChannel() {
@@ -290,11 +376,10 @@ class ScreenCaptureService : Service() {
         )
         val manager = getSystemService(NotificationManager::class.java)
         manager?.createNotificationChannel(channel)
+        log("notification channel created")
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        imageReader?.close()
-        mediaProjection?.stop()
+    private fun log(msg: String) {
+        Log.d(TAG, "[$SUB_TAG] $msg")
     }
 }

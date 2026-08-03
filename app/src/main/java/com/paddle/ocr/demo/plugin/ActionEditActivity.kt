@@ -63,9 +63,11 @@ class ActionEditActivity : Activity() {
             arrayOf(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT)
         )
 
-        // Tell Tasker we request a timeout UI, default to 10 seconds (10000 ms)
-        // Tasker actually expects this value in seconds
-        resultIntent.putExtra(TaskerPluginConstants.EXTRA_REQUESTED_TIMEOUT, 10)
+        // 请求 Tasker 等待较长时间（120秒），因为需要用户点击授权对话框 + OCR 识别
+        // 注意：TaskerPlugin API 要求单位是毫秒
+        if (TaskerPlugin.Setting.hostSupportsSynchronousExecution(intent.extras)) {
+            TaskerPlugin.Setting.requestTimeoutMS(resultIntent, 120000) // 120秒
+        }
 
         setResult(Activity.RESULT_OK, resultIntent)
         super.finish()
