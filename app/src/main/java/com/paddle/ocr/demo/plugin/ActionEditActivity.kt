@@ -4,79 +4,68 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.Spinner
 import android.widget.Toast
-import androidx.core.view.WindowCompat
-import com.paddle.ocr.demo.R
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.paddle.ocr.demo.ui.theme.PPOCRTheme
 
-class ActionEditActivity : Activity() {
-
-    private lateinit var editTargetText: EditText
-    private lateinit var checkIsRegex: CheckBox
-    private lateinit var spinnerCaptureMode: Spinner
-    private lateinit var editFilePath: EditText
-    
-    private var lastSelectedModeIndex = 0
-
+class ActionEditActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_action_edit)
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
+        enableEdgeToEdge()
 
-        editTargetText = findViewById(R.id.editTargetText)
-        checkIsRegex = findViewById(R.id.checkIsRegex)
-        spinnerCaptureMode = findViewById(R.id.spinnerCaptureMode)
-        editFilePath = findViewById(R.id.editFilePath)
+        var initialTargetText = ""
+        var initialIsRegex = false
+        var initialCaptureMode = TaskerPluginConstants.MODE_MEDIA_PROJECTION
+        var initialFilePath = ""
 
-        val modes = arrayOf("录屏权限 (会闪一下黑屏)", "无障碍服务 (静默无感)", "指定文件路径 (本地图片)")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, modes)
-        spinnerCaptureMode.adapter = adapter
-
-        spinnerCaptureMode.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (position == TaskerPluginConstants.MODE_ACCESSIBILITY) {
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-                        Toast.makeText(this@ActionEditActivity, "无障碍截图仅支持 Android 11+", Toast.LENGTH_SHORT).show()
-                        spinnerCaptureMode.setSelection(lastSelectedModeIndex)
-                        return
-                    }
-                }
-                
-                lastSelectedModeIndex = position
-                if (position == TaskerPluginConstants.MODE_FILE_PATH) {
-                    editFilePath.visibility = View.VISIBLE
-                } else {
-                    editFilePath.visibility = View.GONE
-                }
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
-
-        // Read existing bundle if editing
         if (intent.action == TaskerPluginConstants.ACTION_EDIT_SETTING) {
             val bundle = intent.getBundleExtra(TaskerPluginConstants.EXTRA_BUNDLE)
             if (bundle != null) {
-                editTargetText.setText(bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, ""))
-                checkIsRegex.isChecked = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
-                val mode = bundle.getInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, 0)
-                spinnerCaptureMode.setSelection(mode)
-                editFilePath.setText(bundle.getString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, ""))
+                initialTargetText = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, "")
+                initialIsRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
+                initialCaptureMode = bundle.getInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, TaskerPluginConstants.MODE_MEDIA_PROJECTION)
+                initialFilePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, "")
+            }
+        }
+
+        setContent {
+            PPOCRTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    ActionEditScreen(
+                        initialTargetText = initialTargetText,
+                        initialIsRegex = initialIsRegex,
+                        initialCaptureMode = initialCaptureMode,
+                        initialFilePath = initialFilePath,
+                        onSave = { mode, text, regex, path ->
+                            saveAndFinish(mode, text, regex, path)
+                        }
+                    )
+                }
             }
         }
     }
 
-    override fun finish() {
-        val targetText = editTargetText.text.toString()
-        val isRegex = checkIsRegex.isChecked
-        val captureMode = spinnerCaptureMode.selectedItemPosition
-        val filePath = editFilePath.text.toString()
-
+    private fun saveAndFinish(captureMode: Int, targetText: String, isRegex: Boolean, filePath: String) {
         val resultIntent = Intent()
         val resultBundle = Bundle().apply {
             putString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, targetText)
@@ -85,7 +74,6 @@ class ActionEditActivity : Activity() {
             putString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, filePath)
         }
 
-        // Set blurb (description shown in Tasker)
         val blurb = buildString {
             when (captureMode) {
                 TaskerPluginConstants.MODE_MEDIA_PROJECTION -> append("录屏 ")
@@ -97,7 +85,6 @@ class ActionEditActivity : Activity() {
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_STRING_BLURB, blurb)
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_BUNDLE, resultBundle)
 
-        // Tell Tasker which variables this action will output
         val variables = arrayOf(
             "%ocr_full_text\n全量文本\n包含所有拼在一起的文本结果",
             "%ocr_json\nJSON格式结果\n包含每个文本块坐标的JSON数组",
@@ -108,18 +95,204 @@ class ActionEditActivity : Activity() {
         )
         TaskerPlugin.addRelevantVariableList(resultIntent, variables)
 
-        // Also tell Tasker to replace variables in our Target Text and File Path before sending it to us
         resultBundle.putStringArray(
-            "net.dinglisch.android.tasker.extras.VARIABLE_REPLACE_KEYS", 
+            "net.dinglisch.android.tasker.extras.VARIABLE_REPLACE_KEYS",
             arrayOf(
                 TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT,
                 TaskerPluginConstants.BUNDLE_KEY_FILE_PATH
             )
-        ) // 请求宿主等待较长时间（120秒），因为需要用户点击授权对话框 + OCR 识别
-        // TaskerPlugin API 要求单位是毫秒
-        TaskerPlugin.Setting.requestTimeoutMS(resultIntent, 120000) // 120秒
+        )
+        TaskerPlugin.Setting.requestTimeoutMS(resultIntent, 120000)
 
         setResult(Activity.RESULT_OK, resultIntent)
-        super.finish()
+        finish()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActionEditScreen(
+    initialTargetText: String,
+    initialIsRegex: Boolean,
+    initialCaptureMode: Int,
+    initialFilePath: String,
+    onSave: (Int, String, Boolean, String) -> Unit
+) {
+    val context = LocalContext.current
+    var targetText by remember { mutableStateOf(initialTargetText) }
+    var isRegex by remember { mutableStateOf(initialIsRegex) }
+    var captureMode by remember { mutableStateOf(initialCaptureMode) }
+    var filePath by remember { mutableStateOf(initialFilePath) }
+
+    val modeOptions = listOf("录屏权限 (会闪一下黑屏)", "无障碍服务 (静默无感)", "指定文件路径 (本地图片)")
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("配置 OCR 插件") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        },
+        bottomBar = {
+            Surface(
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Button(
+                    onClick = { onSave(captureMode, targetText, isRegex, filePath) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(56.dp)
+                ) {
+                    Text("保存并返回 (Save & Exit)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // 模式选择
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "识别模式",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Column(Modifier.selectableGroup()) {
+                        modeOptions.forEachIndexed { index, text ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .selectable(
+                                        selected = (captureMode == index),
+                                        onClick = {
+                                            if (index == TaskerPluginConstants.MODE_ACCESSIBILITY && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                                                Toast.makeText(context, "无障碍截图仅支持 Android 11+", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                captureMode = index
+                                            }
+                                        },
+                                        role = Role.RadioButton
+                                    )
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = (captureMode == index),
+                                    onClick = null 
+                                )
+                                Text(
+                                    text = text,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (captureMode == TaskerPluginConstants.MODE_FILE_PATH) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = filePath,
+                            onValueChange = { filePath = it },
+                            label = { Text("图片文件绝对路径") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                }
+            }
+
+            // 文本匹配配置
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "目标文本 (可选)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = targetText,
+                        onValueChange = { targetText = it },
+                        label = { Text("输入你想查找的文字") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = isRegex,
+                                onClick = { isRegex = !isRegex },
+                                role = Role.Checkbox
+                            )
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isRegex,
+                            onCheckedChange = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "使用正则表达式匹配",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+
+            // 说明文字
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    text = "说明",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "此插件将自动截取当前屏幕，并识别文字。如果找到了目标文本，会返回中心坐标。\n可以通过 Tasker 变量 %ocr_full_text, %match_found, %match_center_x, %match_center_y 获取结果。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                SelectionContainer {
+                    Text(
+                        text = "💡 免弹窗截图：\n如果您有 Root 或 Shizuku，可通过执行以下 ADB 命令隐式授予录屏权限，从此使用“录屏权限”模式不再有确认弹窗：\nappops set com.paddle.ocr.demo PROJECT_MEDIA allow",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
     }
 }
