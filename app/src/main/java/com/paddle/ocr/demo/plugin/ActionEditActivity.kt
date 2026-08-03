@@ -63,11 +63,9 @@ class ActionEditActivity : Activity() {
             arrayOf(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT)
         )
 
-        // 请求 Tasker 等待较长时间（120秒），因为需要用户点击授权对话框 + OCR 识别
-        // 注意：TaskerPlugin API 要求单位是毫秒
-        if (TaskerPlugin.Setting.hostSupportsSynchronousExecution(intent.extras)) {
-            TaskerPlugin.Setting.requestTimeoutMS(resultIntent, 120000) // 120秒
-        }
+        // 请求宿主等待较长时间（120秒），因为需要用户点击授权对话框 + OCR 识别
+        // TaskerPlugin API 要求单位是毫秒
+        TaskerPlugin.Setting.requestTimeoutMS(resultIntent, 120000) // 120秒
 
         setResult(Activity.RESULT_OK, resultIntent)
         super.finish()

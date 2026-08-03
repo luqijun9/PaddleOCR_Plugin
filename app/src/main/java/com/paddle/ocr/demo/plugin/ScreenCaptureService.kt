@@ -285,7 +285,7 @@ class ScreenCaptureService : Service() {
 
     private fun signalTaskerFinish(fireIntent: Intent?, success: Boolean, varsBundle: Bundle) {
         log("=== signalTaskerFinish ===")
-        log("fireIntent=$fireIntent, success=$success, varsBundleKeys=${varsBundle.keySet()}")
+        log("success=$success, varsBundleKeys=${varsBundle.keySet()}")
         
         if (fireIntent == null) {
             log("fireIntent is null, CANNOT signal Tasker!")
@@ -293,64 +293,9 @@ class ScreenCaptureService : Service() {
         }
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
-        log("resultCode=$resultCode")
-
-        // === 方案1：尝试使用信号 API ===
-        log("=== APPROACH 1: signalFinish via TaskerPlugin API ===")
-        val signaled1 = TaskerPlugin.Setting.signalFinish(this, fireIntent, resultCode, varsBundle)
-        log("signalFinish returned: signaled1=$signaled1")
-
-        // === 方案2：手动构建并发送 completion intent ===
-        log("=== APPROACH 2: Manual broadcast ===")
-        val completionIntentStr = fireIntent.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
-        log("completionIntentStr: ${completionIntentStr?.take(100)}...")
         
-        if (completionIntentStr != null) {
-            try {
-                val completionIntent = Intent.parseUri(completionIntentStr, Intent.URI_INTENT_SCHEME)
-                log("parsed completionIntent:")
-                log("  action=${completionIntent.action}")
-                log("  component=${completionIntent.component}")
-                log("  data=${completionIntent.data}")
-                log("  extras keys=${completionIntent.extras?.keySet()}")
-
-                // 打印 extras 值
-                completionIntent.extras?.keySet()?.forEach { key ->
-                    log("    extra: $key = ${completionIntent.extras?.get(key)}")
-                }
-
-                // 添加 resultCode 和 variables
-                completionIntent.putExtra(TaskerPluginConstants.EXTRA_RESULT_CODE, resultCode)
-                completionIntent.putExtra(TaskerPluginConstants.EXTRA_VARIABLES, varsBundle)
-
-                log("after adding extras:")
-                log("  EXTRA_RESULT_CODE=$resultCode")
-                log("  EXTRA_VARIABLES has %ocr_full_text=${varsBundle.containsKey("%ocr_full_text")}")
-
-                // Android 14+ 需要标志
-                completionIntent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
-
-                log("sending broadcast...")
-                sendBroadcast(completionIntent)
-                log("broadcast sent successfully (manual approach 2)")
-                
-                // === 方案3：也通过 application context 发送 ===
-                log("=== APPROACH 3: broadcast via applicationContext ===")
-                val appCompletionIntent = Intent.parseUri(completionIntentStr, Intent.URI_INTENT_SCHEME)
-                appCompletionIntent.putExtra(TaskerPluginConstants.EXTRA_RESULT_CODE, resultCode)
-                appCompletionIntent.putExtra(TaskerPluginConstants.EXTRA_VARIABLES, varsBundle)
-                appCompletionIntent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
-                applicationContext.sendBroadcast(appCompletionIntent)
-                log("broadcast via applicationContext sent successfully")
-                
-            } catch (e: Exception) {
-                log("EXCEPTION in manual broadcast: ${e.message}")
-                e.printStackTrace()
-            }
-        } else {
-            log("completionIntentStr is NULL - cannot build manual intent!")
-            log("All fireIntent extras: ${fireIntent.extras?.keySet()}")
-        }
+        val signaled = TaskerPlugin.Setting.signalFinish(this, fireIntent, resultCode, varsBundle)
+        log("signalFinish signaled=$signaled")
 
         Handler(Looper.getMainLooper()).post {
             if (success) {
