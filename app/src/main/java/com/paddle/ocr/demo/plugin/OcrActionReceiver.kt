@@ -103,6 +103,11 @@ class OcrActionReceiver : BroadcastReceiver() {
     private fun signalError(context: Context, fireIntent: Intent, errorMessage: String) {
         val varsBundle = android.os.Bundle().apply {
             putString("%ocr_error", errorMessage)
+            putString("%ocr_full_text", "")
+            putString("%ocr_json", "")
+            putString("%match_found", "")
+            putString("%match_center_x", "")
+            putString("%match_center_y", "")
         }
         TaskerPlugin.Setting.signalFinish(context, fireIntent, TaskerPlugin.Setting.RESULT_CODE_FAILED, varsBundle)
     }

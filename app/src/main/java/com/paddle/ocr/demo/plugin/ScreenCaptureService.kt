@@ -267,18 +267,26 @@ class ScreenCaptureService : Service() {
                     }
                 }
             }
-
             val fullTextStr = fullTextBuilder.toString().trimEnd()
             val jsonStr = jsonArray.toString()
             log("fullText length=${fullTextStr.length}, json length=${jsonStr.length}, matchFound=$matchFound")
-
             val bundle = Bundle().apply {
+                putString("%ocr_error", "")
                 putString("%ocr_full_text", fullTextStr)
                 putString("%ocr_json", jsonStr)
-                putString("%match_found", matchFound.toString())
-                if (matchFound) {
-                    putString("%match_center_x", matchCenterX.toString())
-                    putString("%match_center_y", matchCenterY.toString())
+                if (targetText.isEmpty()) {
+                    putString("%match_found", "")
+                    putString("%match_center_x", "")
+                    putString("%match_center_y", "")
+                } else {
+                    putString("%match_found", matchFound.toString())
+                    if (matchFound) {
+                        putString("%match_center_x", matchCenterX.toString())
+                        putString("%match_center_y", matchCenterY.toString())
+                    } else {
+                        putString("%match_center_x", "")
+                        putString("%match_center_y", "")
+                    }
                 }
             }
             log("varsBundle created with keys: ${bundle.keySet()}")
@@ -310,6 +318,17 @@ class ScreenCaptureService : Service() {
         if (fireIntent == null) {
             log("fireIntent is null, CANNOT signal Tasker!")
             return
+        }
+
+        if (!success) {
+            varsBundle.putString("%ocr_full_text", "")
+            varsBundle.putString("%ocr_json", "")
+            varsBundle.putString("%match_found", "")
+            varsBundle.putString("%match_center_x", "")
+            varsBundle.putString("%match_center_y", "")
+            if (!varsBundle.containsKey("%ocr_error")) {
+                varsBundle.putString("%ocr_error", "未知错误")
+            }
         }
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED

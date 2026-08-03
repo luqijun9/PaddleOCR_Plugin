@@ -149,15 +149,24 @@ class OcrAccessibilityService : AccessibilityService() {
                 val varsBundle = Bundle().apply {
                     val fullTextStr = fullTextBuilder.toString().trimEnd()
                     val jsonStr = jsonArray.toString()
-                    val matchStr = matchFound.toString()
                     
+                    putString("%ocr_error", "")
                     putString("%ocr_full_text", fullTextStr)
                     putString("%ocr_json", jsonStr)
-                    putString("%match_found", matchStr)
                     
-                    if (matchFound) {
-                        putString("%match_center_x", matchCenterX.toString())
-                        putString("%match_center_y", matchCenterY.toString())
+                    if (targetText.isEmpty()) {
+                        putString("%match_found", "")
+                        putString("%match_center_x", "")
+                        putString("%match_center_y", "")
+                    } else {
+                        putString("%match_found", matchFound.toString())
+                        if (matchFound) {
+                            putString("%match_center_x", matchCenterX.toString())
+                            putString("%match_center_y", matchCenterY.toString())
+                        } else {
+                            putString("%match_center_x", "")
+                            putString("%match_center_y", "")
+                        }
                     }
                 }
 
@@ -177,6 +186,11 @@ class OcrAccessibilityService : AccessibilityService() {
         Handler(Looper.getMainLooper()).post {
             val varsBundle = Bundle().apply {
                 putString("%ocr_error", errorMessage)
+                putString("%ocr_full_text", "")
+                putString("%ocr_json", "")
+                putString("%match_found", "")
+                putString("%match_center_x", "")
+                putString("%match_center_y", "")
             }
             TaskerPlugin.Setting.signalFinish(this, fireIntent, TaskerPlugin.Setting.RESULT_CODE_FAILED, varsBundle)
         }
