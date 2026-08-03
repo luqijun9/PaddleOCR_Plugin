@@ -95,11 +95,18 @@ class ActionEditActivity : ComponentActivity() {
 
         val blurb = buildString {
             when (captureMode) {
-                TaskerPluginConstants.MODE_MEDIA_PROJECTION -> append("录屏 ")
-                TaskerPluginConstants.MODE_ACCESSIBILITY -> append("静默 ")
-                TaskerPluginConstants.MODE_FILE_PATH -> append("文件 ")
+                TaskerPluginConstants.MODE_MEDIA_PROJECTION -> append("录屏模式 ")
+                TaskerPluginConstants.MODE_ACCESSIBILITY -> append("无障碍模式 ")
+                TaskerPluginConstants.MODE_FILE_PATH -> {
+                    if (filePath.isEmpty()) {
+                        append("无图片 ")
+                    } else {
+                        val fileName = java.io.File(filePath).name
+                        if (fileName.isNotEmpty()) append("$fileName ") else append("无图片 ")
+                    }
+                }
             }
-            if (targetText.isEmpty()) append("识别全部文字") else append("查找: $targetText")
+            if (targetText.isEmpty()) append("无查找") else append("查找: $targetText")
         }
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_STRING_BLURB, blurb)
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_BUNDLE, resultBundle)
@@ -107,7 +114,7 @@ class ActionEditActivity : ComponentActivity() {
         val variables = arrayOf(
             "%ocr_full_text\n全量文本\n包含所有拼在一起的文本结果",
             "%ocr_json\nJSON格式结果\n包含每个文本块坐标的JSON数组",
-            "%match_found\n是否找到目标文本\ntrue 或 false",
+            "%match_found\n是否找到查找文本\ntrue 或 false",
             "%match_center_x\n目标X坐标\n匹配文本的中心点X轴坐标",
             "%match_center_y\n目标Y坐标\n匹配文本的中心点Y轴坐标",
             "%ocr_error\n错误信息\n运行出错时的提示（如无障碍未开启）"
@@ -302,7 +309,7 @@ fun ActionEditScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "目标文本 (可选)",
+                        text = "查找文本 (可选)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -423,7 +430,7 @@ fun ActionEditScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "此插件将自动截取当前屏幕，并识别文字。如果找到了目标文本，会返回中心坐标。\n可以通过 Tasker 变量 %ocr_full_text, %match_found, %match_center_x, %match_center_y 获取结果。",
+                    text = "此插件将自动截取当前屏幕，并识别文字。如果找到了查找文本，会返回中心坐标。\n可以通过 Tasker 变量 %ocr_full_text, %match_found, %match_center_x, %match_center_y 获取结果。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )

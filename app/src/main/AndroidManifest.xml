@@ -31,7 +31,7 @@
             android:name=".plugin.ActionEditActivity"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
-            android:label="OCR屏幕识别 (自带截屏)">
+            android:label="OCR屏幕识别">
             <intent-filter>
                 <action android:name="com.twofortyfouram.locale.intent.action.EDIT_SETTING" />
             </intent-filter>
