@@ -47,6 +47,8 @@ class OcrActionReceiver : BroadcastReceiver() {
             log("bundle keys: ${bundle.keySet()}")
             val targetText = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, "")
             val isRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
+            val isExactMatch = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, false)
+            val isIgnoreCase = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, false)
             val captureMode = bundle.getInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, TaskerPluginConstants.MODE_MEDIA_PROJECTION)
             val filePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, "")
 
@@ -61,7 +63,7 @@ class OcrActionReceiver : BroadcastReceiver() {
                     val accService = OcrAccessibilityService.instance
                     if (accService != null) {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                            accService.captureAndRecognize(intent, targetText, isRegex)
+                            accService.captureAndRecognize(intent, targetText, isRegex, isExactMatch, isIgnoreCase)
                         } else {
                             signalError(context, intent, "无障碍截图仅支持 Android 11+")
                         }
@@ -78,6 +80,8 @@ class OcrActionReceiver : BroadcastReceiver() {
                         putExtra("fireIntent", intent)
                         putExtra("targetText", targetText)
                         putExtra("isRegex", isRegex)
+                        putExtra("isExactMatch", isExactMatch)
+                        putExtra("isIgnoreCase", isIgnoreCase)
                         putExtra(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, filePath)
                     }
                     if (android.os.Build.VERSION.SDK_INT >= 26) {
@@ -93,6 +97,8 @@ class OcrActionReceiver : BroadcastReceiver() {
                         putExtra("fireIntent", intent)
                         putExtra("targetText", targetText)
                         putExtra("isRegex", isRegex)
+                        putExtra("isExactMatch", isExactMatch)
+                        putExtra("isIgnoreCase", isIgnoreCase)
                     }
                     context.startActivity(activityIntent)
                 }

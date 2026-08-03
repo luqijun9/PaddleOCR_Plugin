@@ -18,6 +18,8 @@ class ScreenCaptureActivity : Activity() {
     private lateinit var mediaProjectionManager: MediaProjectionManager
     private var targetText: String = ""
     private var isRegex: Boolean = false
+    private var isExactMatch: Boolean = false
+    private var isIgnoreCase: Boolean = false
     private var fireIntent: Intent? = null
     private var isAppTest: Boolean = false
 
@@ -30,9 +32,11 @@ class ScreenCaptureActivity : Activity() {
 
         targetText = intent.getStringExtra("targetText") ?: ""
         isRegex = intent.getBooleanExtra("isRegex", false)
+        isExactMatch = intent.getBooleanExtra("isExactMatch", false)
+        isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", false)
         fireIntent = intent.getParcelableExtra("fireIntent")
         isAppTest = intent.getBooleanExtra("isAppTest", false)
-        log("targetText=$targetText, isRegex=$isRegex, isAppTest=$isAppTest")
+        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, isAppTest=$isAppTest")
 
         // 检查 fireIntent 是否完整
         if (fireIntent != null) {
@@ -71,6 +75,8 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("data", data)
                     putExtra("targetText", targetText)
                     putExtra("isRegex", isRegex)
+                    putExtra("isExactMatch", isExactMatch)
+                    putExtra("isIgnoreCase", isIgnoreCase)
                     putExtra("fireIntent", fireIntent)
                     putExtra("isAppTest", isAppTest)
                 }

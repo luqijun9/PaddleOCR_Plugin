@@ -42,6 +42,8 @@ class ActionEditActivity : ComponentActivity() {
 
         var initialTargetText = ""
         var initialIsRegex = false
+        var initialIsExactMatch = false
+        var initialIsIgnoreCase = false
         var initialCaptureMode = TaskerPluginConstants.MODE_MEDIA_PROJECTION
         var initialFilePath = ""
 
@@ -50,6 +52,8 @@ class ActionEditActivity : ComponentActivity() {
             if (bundle != null) {
                 initialTargetText = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, "")
                 initialIsRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
+                initialIsExactMatch = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, false)
+                initialIsIgnoreCase = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, false)
                 initialCaptureMode = bundle.getInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, TaskerPluginConstants.MODE_MEDIA_PROJECTION)
                 initialFilePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, "")
             }
@@ -64,10 +68,12 @@ class ActionEditActivity : ComponentActivity() {
                     ActionEditScreen(
                         initialTargetText = initialTargetText,
                         initialIsRegex = initialIsRegex,
+                        initialIsExactMatch = initialIsExactMatch,
+                        initialIsIgnoreCase = initialIsIgnoreCase,
                         initialCaptureMode = initialCaptureMode,
                         initialFilePath = initialFilePath,
-                        onSave = { mode, text, regex, path ->
-                            saveAndFinish(mode, text, regex, path)
+                        onSave = { mode, text, regex, exact, ignoreCase, path ->
+                            saveAndFinish(mode, text, regex, exact, ignoreCase, path)
                         }
                     )
                 }
@@ -75,11 +81,13 @@ class ActionEditActivity : ComponentActivity() {
         }
     }
 
-    private fun saveAndFinish(captureMode: Int, targetText: String, isRegex: Boolean, filePath: String) {
+    private fun saveAndFinish(captureMode: Int, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, filePath: String) {
         val resultIntent = Intent()
         val resultBundle = Bundle().apply {
             putString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, targetText)
             putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, isRegex)
+            putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, isExactMatch)
+            putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, isIgnoreCase)
             putInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, captureMode)
             putString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, filePath)
         }
@@ -124,13 +132,17 @@ class ActionEditActivity : ComponentActivity() {
 fun ActionEditScreen(
     initialTargetText: String,
     initialIsRegex: Boolean,
+    initialIsExactMatch: Boolean,
+    initialIsIgnoreCase: Boolean,
     initialCaptureMode: Int,
     initialFilePath: String,
-    onSave: (Int, String, Boolean, String) -> Unit
+    onSave: (Int, String, Boolean, Boolean, Boolean, String) -> Unit
 ) {
     val context = LocalContext.current
     var targetText by remember { mutableStateOf(initialTargetText) }
     var isRegex by remember { mutableStateOf(initialIsRegex) }
+    var isExactMatch by remember { mutableStateOf(initialIsExactMatch) }
+    var isIgnoreCase by remember { mutableStateOf(initialIsIgnoreCase) }
     var captureMode by remember { mutableStateOf(initialCaptureMode) }
     var filePath by remember { mutableStateOf(initialFilePath) }
 
@@ -175,7 +187,7 @@ fun ActionEditScreen(
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Button(
-                    onClick = { onSave(captureMode, targetText, isRegex, filePath) },
+                    onClick = { onSave(captureMode, targetText, isRegex, isExactMatch, isIgnoreCase, filePath) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
@@ -303,6 +315,55 @@ fun ActionEditScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "匹配范围",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val matchScopeOptions = listOf("包含", "完全匹配")
+                    var selectedScopeIndex = if (isExactMatch) 1 else 0
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        matchScopeOptions.forEachIndexed { index, option ->
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .selectable(
+                                        selected = selectedScopeIndex == index,
+                                        onClick = {
+                                            selectedScopeIndex = index
+                                            isExactMatch = (index == 1)
+                                        },
+                                        role = Role.RadioButton
+                                    )
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.material3.RadioButton(
+                                    selected = selectedScopeIndex == index,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "匹配规则",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
@@ -313,7 +374,7 @@ fun ActionEditScreen(
                                 onClick = { isRegex = !isRegex },
                                 role = Role.Checkbox
                             )
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -323,6 +384,28 @@ fun ActionEditScreen(
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
                             text = "使用正则表达式匹配",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = isIgnoreCase,
+                                onClick = { isIgnoreCase = !isIgnoreCase },
+                                role = Role.Checkbox
+                            )
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isIgnoreCase,
+                            onCheckedChange = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "忽略大小写",
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }

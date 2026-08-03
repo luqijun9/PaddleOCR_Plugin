@@ -15,6 +15,8 @@ object TaskerPluginConstants {
     // Our custom bundle keys
     const val BUNDLE_KEY_TARGET_TEXT = "target_text"
     const val BUNDLE_KEY_IS_REGEX = "is_regex"
+    const val BUNDLE_KEY_IS_EXACT_MATCH = "is_exact_match"
+    const val BUNDLE_KEY_IS_IGNORE_CASE = "is_ignore_case"
     const val BUNDLE_KEY_CAPTURE_MODE = "capture_mode"
     const val BUNDLE_KEY_FILE_PATH = "file_path"
     

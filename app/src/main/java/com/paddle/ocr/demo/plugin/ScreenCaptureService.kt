@@ -71,18 +71,20 @@ class ScreenCaptureService : Service() {
         val fireIntent: Intent? = intent.getParcelableExtra("fireIntent")
         val targetText = intent.getStringExtra("targetText") ?: ""
         val isRegex = intent.getBooleanExtra("isRegex", false)
+        val isExactMatch = intent.getBooleanExtra("isExactMatch", false)
+        val isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", false)
         val filePath = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH)
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
         log("fireIntent action=${fireIntent?.action}")
-        log("targetText=$targetText, isRegex=$isRegex, filePath=$filePath")
+        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, filePath=$filePath")
 
         if (!filePath.isNullOrEmpty()) {
             log("Using file path mode: $filePath")
             val bitmap = android.graphics.BitmapFactory.decodeFile(filePath)
             if (bitmap != null) {
                 CoroutineScope(Dispatchers.Default).launch {
-                    processOcr(bitmap, targetText, isRegex, fireIntent, isAppTest)
+                    processOcr(bitmap, targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest)
                     stopSelf()
                 }
             } else {
@@ -103,7 +105,7 @@ class ScreenCaptureService : Service() {
             log("MediaProjection token received, starting capture")
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-            captureScreenAndOcr(targetText, isRegex, fireIntent, isAppTest)
+            captureScreenAndOcr(targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest)
         } else {
             log("No MediaProjection token, cannot capture screen")
             val varsBundle = Bundle().apply {
@@ -117,7 +119,7 @@ class ScreenCaptureService : Service() {
     }
 
     @SuppressLint("WrongConstant")
-    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
+    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
         log("=== captureScreenAndOcr ===")
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
@@ -184,7 +186,7 @@ class ScreenCaptureService : Service() {
 
                 log("launching coroutine for OCR processing")
                 scope.launch {
-                    processOcr(croppedBitmap, targetText, isRegex, fireIntent, isAppTest)
+                    processOcr(croppedBitmap, targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest)
                     log("OCR processing done, calling stopSelf")
                     stopSelf()
                 }
@@ -202,7 +204,7 @@ class ScreenCaptureService : Service() {
         log("onImageAvailable listener registered")
     }
 
-    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
+    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
         log("=== processOcr ===")
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
@@ -252,9 +254,16 @@ class ScreenCaptureService : Service() {
                 // Check for target text
                 if (!matchFound && targetText.isNotEmpty()) {
                     val isMatch = if (isRegex) {
-                        Regex(targetText).containsMatchIn(ocrResult.text)
+                        val regexOptions = if (isIgnoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet()
+                        if (isExactMatch) {
+                            Regex(targetText, regexOptions).matches(ocrResult.text)
+                        } else {
+                            Regex(targetText, regexOptions).containsMatchIn(ocrResult.text)
+                        }
+                    } else if (isExactMatch) {
+                        ocrResult.text.equals(targetText, ignoreCase = isIgnoreCase)
                     } else {
-                        ocrResult.text.contains(targetText)
+                        ocrResult.text.contains(targetText, ignoreCase = isIgnoreCase)
                     }
                     if (isMatch) {
                         log("MATCH FOUND in result[$i]!")

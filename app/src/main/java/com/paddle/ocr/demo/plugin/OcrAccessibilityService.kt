@@ -57,7 +57,7 @@ class OcrAccessibilityService : AccessibilityService() {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    fun captureAndRecognize(fireIntent: Intent, targetText: String, isRegex: Boolean) {
+    fun captureAndRecognize(fireIntent: Intent, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean) {
         Log.d(TAG, "OcrAccessibilityService captureAndRecognize triggered")
         
         takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
@@ -71,7 +71,7 @@ class OcrAccessibilityService : AccessibilityService() {
                     // Start OCR process
                     val softwareBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
                     hardwareBuffer.close()
-                    performOcr(softwareBitmap, fireIntent, targetText, isRegex)
+                    performOcr(softwareBitmap, fireIntent, targetText, isRegex, isExactMatch, isIgnoreCase)
                 } else {
                     hardwareBuffer.close()
                     signalError(fireIntent, "无法从 HardwareBuffer 转换 Bitmap")
@@ -85,7 +85,7 @@ class OcrAccessibilityService : AccessibilityService() {
         })
     }
 
-    private fun performOcr(bitmap: Bitmap, fireIntent: Intent, targetText: String, isRegex: Boolean) {
+    private fun performOcr(bitmap: Bitmap, fireIntent: Intent, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean) {
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 val ocrEngine = OCRApplication.instance.ocr
@@ -130,12 +130,18 @@ class OcrAccessibilityService : AccessibilityService() {
 
                     // Check for target text
                     if (!matchFound && targetText.isNotEmpty()) {
-                        val isMatch = if (isRegex && regex != null) {
-                            regex.containsMatchIn(text)
+                        val isMatch = if (isRegex) {
+                            val regexOptions = if (isIgnoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet()
+                            if (isExactMatch) {
+                                Regex(targetText, regexOptions).matches(ocrResult.text)
+                            } else {
+                                Regex(targetText, regexOptions).containsMatchIn(ocrResult.text)
+                            }
+                        } else if (isExactMatch) {
+                            ocrResult.text.equals(targetText, ignoreCase = isIgnoreCase)
                         } else {
-                            text.contains(targetText)
+                            ocrResult.text.contains(targetText, ignoreCase = isIgnoreCase)
                         }
-
                         if (isMatch) {
                             matchFound = true
                             val tl = pts[0]
