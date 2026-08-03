@@ -20,6 +20,11 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:theme="@style/Theme.PaddleOCR" />
+
+        <activity
+            android:name=".plugin.HomeActivity"
+            android:exported="true"
             android:theme="@style/Theme.PaddleOCR">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
