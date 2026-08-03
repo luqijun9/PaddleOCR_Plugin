@@ -228,76 +228,13 @@ class ScreenCaptureService : Service() {
                 log("NO OCR RESULTS FOUND")
             }
 
-            val fullTextBuilder = StringBuilder()
-            val jsonArray = JSONArray()
-            var matchFound = false
-            var matchCenterX = 0f
-            var matchCenterY = 0f
-
-            result.results.forEachIndexed { i, ocrResult ->
-                fullTextBuilder.append(ocrResult.text).append("\n")
-                log("  result[$i]: text='${ocrResult.text}' confidence=${ocrResult.confidence}")
-
-                val jsonObj = JSONObject()
-                jsonObj.put("text", ocrResult.text)
-                jsonObj.put("confidence", ocrResult.confidence)
-                val boxArr = JSONArray()
-                ocrResult.box.points.forEach { point ->
-                    val pointObj = JSONObject()
-                    pointObj.put("x", point.x)
-                    pointObj.put("y", point.y)
-                    boxArr.put(pointObj)
-                }
-                jsonObj.put("box", boxArr)
-                jsonArray.put(jsonObj)
-
-                // Check for target text
-                if (!matchFound && targetText.isNotEmpty()) {
-                    val isMatch = if (isRegex) {
-                        val regexOptions = if (isIgnoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet()
-                        if (isExactMatch) {
-                            Regex(targetText, regexOptions).matches(ocrResult.text)
-                        } else {
-                            Regex(targetText, regexOptions).containsMatchIn(ocrResult.text)
-                        }
-                    } else if (isExactMatch) {
-                        ocrResult.text.equals(targetText, ignoreCase = isIgnoreCase)
-                    } else {
-                        ocrResult.text.contains(targetText, ignoreCase = isIgnoreCase)
-                    }
-                    if (isMatch) {
-                        log("MATCH FOUND in result[$i]!")
-                        matchFound = true
-                        val tl = ocrResult.box.points[0]
-                        val br = ocrResult.box.points[2]
-                        matchCenterX = (tl.x + br.x) / 2f
-                        matchCenterY = (tl.y + br.y) / 2f
-                        log("  centerX=$matchCenterX, centerY=$matchCenterY")
-                    }
-                }
-            }
-            val fullTextStr = fullTextBuilder.toString().trimEnd()
-            val jsonStr = jsonArray.toString()
-            log("fullText length=${fullTextStr.length}, json length=${jsonStr.length}, matchFound=$matchFound")
-            val bundle = Bundle().apply {
-                putString("%ocr_error", "")
-                putString("%ocr_full_text", fullTextStr)
-                putString("%ocr_json", jsonStr)
-                if (targetText.isEmpty()) {
-                    putString("%match_found", "")
-                    putString("%match_center_x", "")
-                    putString("%match_center_y", "")
-                } else {
-                    putString("%match_found", matchFound.toString())
-                    if (matchFound) {
-                        putString("%match_center_x", matchCenterX.toString())
-                        putString("%match_center_y", matchCenterY.toString())
-                    } else {
-                        putString("%match_center_x", "")
-                        putString("%match_center_y", "")
-                    }
-                }
-            }
+            val bundle = OcrMatchUtils.processOcrResultToBundle(
+                result = result,
+                targetText = targetText,
+                isRegex = isRegex,
+                isExactMatch = isExactMatch,
+                isIgnoreCase = isIgnoreCase
+            )
             log("varsBundle created with keys: ${bundle.keySet()}")
 
             if (isAppTest) {

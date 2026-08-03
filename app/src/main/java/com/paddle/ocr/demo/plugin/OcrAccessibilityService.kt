@@ -98,83 +98,13 @@ class OcrAccessibilityService : AccessibilityService() {
                 val result = ocrEngine.recognize(bitmap)
                 bitmap.recycle()
                 
-                val fullTextBuilder = StringBuilder()
-                val jsonArray = JSONArray()
-
-                var matchFound = false
-                var matchCenterX = 0f
-                var matchCenterY = 0f
-
-                val regex = if (isRegex && targetText.isNotEmpty()) Regex(targetText) else null
-
-                for (ocrResult in result.results) {
-                    val text = ocrResult.text
-                    val confidence = ocrResult.confidence
-                    val pts = ocrResult.box.points
-
-                    fullTextBuilder.append(text).append("\n")
-
-                    val boxJson = JSONObject().apply {
-                        put("text", text)
-                        put("confidence", confidence.toDouble())
-                        val ptsArray = JSONArray()
-                        pts.forEach { pt ->
-                            ptsArray.put(JSONObject().apply {
-                                put("x", pt.x)
-                                put("y", pt.y)
-                            })
-                        }
-                        put("points", ptsArray)
-                    }
-                    jsonArray.put(boxJson)
-
-                    // Check for target text
-                    if (!matchFound && targetText.isNotEmpty()) {
-                        val isMatch = if (isRegex) {
-                            val regexOptions = if (isIgnoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet()
-                            if (isExactMatch) {
-                                Regex(targetText, regexOptions).matches(ocrResult.text)
-                            } else {
-                                Regex(targetText, regexOptions).containsMatchIn(ocrResult.text)
-                            }
-                        } else if (isExactMatch) {
-                            ocrResult.text.equals(targetText, ignoreCase = isIgnoreCase)
-                        } else {
-                            ocrResult.text.contains(targetText, ignoreCase = isIgnoreCase)
-                        }
-                        if (isMatch) {
-                            matchFound = true
-                            val tl = pts[0]
-                            val br = pts[2]
-                            matchCenterX = (tl.x + br.x) / 2f
-                            matchCenterY = (tl.y + br.y) / 2f
-                        }
-                    }
-                }
-
-                val varsBundle = Bundle().apply {
-                    val fullTextStr = fullTextBuilder.toString().trimEnd()
-                    val jsonStr = jsonArray.toString()
-                    
-                    putString("%ocr_error", "")
-                    putString("%ocr_full_text", fullTextStr)
-                    putString("%ocr_json", jsonStr)
-                    
-                    if (targetText.isEmpty()) {
-                        putString("%match_found", "")
-                        putString("%match_center_x", "")
-                        putString("%match_center_y", "")
-                    } else {
-                        putString("%match_found", matchFound.toString())
-                        if (matchFound) {
-                            putString("%match_center_x", matchCenterX.toString())
-                            putString("%match_center_y", matchCenterY.toString())
-                        } else {
-                            putString("%match_center_x", "")
-                            putString("%match_center_y", "")
-                        }
-                    }
-                }
+                val varsBundle = OcrMatchUtils.processOcrResultToBundle(
+                    result = result,
+                    targetText = targetText,
+                    isRegex = isRegex,
+                    isExactMatch = isExactMatch,
+                    isIgnoreCase = isIgnoreCase
+                )
 
                 Handler(Looper.getMainLooper()).post {
                     Log.d(TAG, "OcrAccessibilityService OCR Complete, signaling Tasker")
