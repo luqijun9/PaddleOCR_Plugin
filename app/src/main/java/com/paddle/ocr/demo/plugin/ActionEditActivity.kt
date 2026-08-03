@@ -7,8 +7,9 @@ import android.net.Uri
 import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.res.painterResource
+import com.paddle.ocr.demo.R
 import android.app.Activity
 import android.content.Intent
 import android.os.Build
@@ -118,22 +119,6 @@ class ActionEditActivity : ComponentActivity() {
     }
 }
 
-fun getRealPathFromUri(context: Context, uri: Uri): String? {
-    var realPath: String? = null
-    try {
-        val projection = arrayOf(MediaStore.Images.Media.DATA)
-        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-                realPath = cursor.getString(columnIndex)
-            }
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-    return realPath
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionEditScreen(
@@ -150,10 +135,10 @@ fun ActionEditScreen(
     var filePath by remember { mutableStateOf(initialFilePath) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            val realPath = getRealPathFromUri(context, it)
+            val realPath = UriUtils.getPath(context, it)
             if (realPath != null) {
                 filePath = realPath
             } else {
@@ -169,7 +154,7 @@ fun ActionEditScreen(
         if (!allGranted) {
             Toast.makeText(context, "未授予存储权限，Tasker 可能无法读取本地图片文件", Toast.LENGTH_SHORT).show()
         }
-        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        galleryLauncher.launch(arrayOf("image/*"))
     }
 
     val modeOptions = listOf("录屏权限 (会闪一下黑屏)", "无障碍服务 (静默无感)", "指定文件路径 (本地图片)")
@@ -267,7 +252,7 @@ fun ActionEditScreen(
                                 singleLine = true
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            FilledTonalButton(
+                            IconButton(
                                 onClick = { 
                                     val permissionsToRequest = mutableListOf<String>()
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -282,12 +267,15 @@ fun ActionEditScreen(
                                     if (permissionsToRequest.isNotEmpty()) {
                                         permissionLauncher.launch(permissionsToRequest.toTypedArray())
                                     } else {
-                                        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                        galleryLauncher.launch(arrayOf("image/*"))
                                     }
                                 },
                                 modifier = Modifier.padding(top = 8.dp)
                             ) {
-                                Text("浏览文件")
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_folder_outline),
+                                    contentDescription = "选择文件"
+                                )
                             }
                         }
                     }
