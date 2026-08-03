@@ -24,6 +24,7 @@ class ScreenCaptureActivity : Activity() {
     private var isAppTest: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        overridePendingTransition(0, 0)
         super.onCreate(savedInstanceState)
         log("=== onCreate ===")
         log("savedInstanceState=${savedInstanceState != null}")
@@ -91,6 +92,11 @@ class ScreenCaptureActivity : Activity() {
         }
         log("finishing activity")
         finish()
+    }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(0, 0)
     }
 
     override fun onDestroy() {
