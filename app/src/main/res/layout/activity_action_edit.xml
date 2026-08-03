@@ -8,6 +8,27 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="识别模式"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <Spinner
+        android:id="@+id/spinnerCaptureMode"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginBottom="16dp" />
+
+    <EditText
+        android:id="@+id/editFilePath"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="输入或粘贴文件绝对路径"
+        android:visibility="gone"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:text="目标文本 (可选)"
         android:textSize="16sp"
         android:textStyle="bold" />

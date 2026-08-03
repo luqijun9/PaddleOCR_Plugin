@@ -68,38 +68,50 @@ class ScreenCaptureService : Service() {
             return START_NOT_STICKY
         }
 
-        val resultCode = intent.getIntExtra("resultCode", -1)
-        val data: Intent = intent.getParcelableExtra("data") ?: run {
-            log("data is NULL, stopping self")
-            return START_NOT_STICKY
-        }
+        val fireIntent: Intent? = intent.getParcelableExtra("fireIntent")
         val targetText = intent.getStringExtra("targetText") ?: ""
         val isRegex = intent.getBooleanExtra("isRegex", false)
-        val fireIntent: Intent? = intent.getParcelableExtra("fireIntent")
+        val filePath = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH)
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
-        log("resultCode=$resultCode")
-        log("targetText=$targetText, isRegex=$isRegex, isAppTest=$isAppTest")
-        log("data action=${data.action}")
+        log("fireIntent action=${fireIntent?.action}")
+        log("targetText=$targetText, isRegex=$isRegex, filePath=$filePath")
 
-        if (fireIntent != null) {
-            log("fireIntent action=${fireIntent.action}")
-            log("fireIntent extras keys=${fireIntent.extras?.keySet()}")
-            val completionStr = fireIntent.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
-            log("fireIntent hasCompletionIntent=${completionStr != null}")
-            if (completionStr != null) {
-                log("fireIntent completionIntentStr=$completionStr")
+        if (!filePath.isNullOrEmpty()) {
+            log("Using file path mode: $filePath")
+            val bitmap = android.graphics.BitmapFactory.decodeFile(filePath)
+            if (bitmap != null) {
+                CoroutineScope(Dispatchers.Default).launch {
+                    processOcr(bitmap, targetText, isRegex, fireIntent, isAppTest)
+                    stopSelf()
+                }
+            } else {
+                log("Failed to decode file: $filePath")
+                val varsBundle = Bundle().apply {
+                    putString("%ocr_error", "无法读取图片文件: $filePath")
+                }
+                signalTaskerFinish(fireIntent, false, varsBundle)
+                stopSelf()
             }
-        } else {
-            log("fireIntent is NULL!")
+            return START_NOT_STICKY
         }
 
-        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-        log("mediaProjection created: ${mediaProjection != null}")
+        val resultCode = intent.getIntExtra("resultCode", -1)
+        val data: Intent? = intent.getParcelableExtra("data")
 
-        log("calling captureScreenAndOcr")
-        captureScreenAndOcr(targetText, isRegex, fireIntent, isAppTest)
+        if (resultCode == android.app.Activity.RESULT_OK && data != null) {
+            log("MediaProjection token received, starting capture")
+            val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            mediaProjection = projectionManager.getMediaProjection(resultCode, data)
+            captureScreenAndOcr(targetText, isRegex, fireIntent, isAppTest)
+        } else {
+            log("No MediaProjection token, cannot capture screen")
+            val varsBundle = Bundle().apply {
+                putString("%ocr_error", "未获得录屏权限")
+            }
+            signalTaskerFinish(fireIntent, false, varsBundle)
+            stopSelf()
+        }
 
         return START_NOT_STICKY
     }

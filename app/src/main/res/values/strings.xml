@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PP-OCRv6 Demo</string>
+    <string name="accessibility_service_description">用于 Tasker 插件的静默屏幕截图和OCR识别。</string>
 </resources>

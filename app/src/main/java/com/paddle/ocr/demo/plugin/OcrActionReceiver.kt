@@ -41,41 +41,73 @@ class OcrActionReceiver : BroadcastReceiver() {
             log("completionIntentStr=$completionIntentStr")
         }
 
-        // 3. 检查 BUNDLE
         val bundle = intent.getBundleExtra(TaskerPluginConstants.EXTRA_BUNDLE)
         log("bundle=$bundle")
         if (bundle != null) {
             log("bundle keys: ${bundle.keySet()}")
-            log("targetText=${bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT)}")
-            log("isRegex=${bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX)}")
-        }
+            val targetText = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, "")
+            val isRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
+            val captureMode = bundle.getInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, TaskerPluginConstants.MODE_MEDIA_PROJECTION)
+            val filePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, "")
 
-        val targetText = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT) ?: ""
-        val isRegex = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX) ?: false
+            // IMPORTANT: For asynchronous Tasker plugins, we MUST return RESULT_CODE_PENDING (3)
+            // in the BroadcastReceiver's resultCode, so Tasker knows to wait for the completion intent.
+            if (isOrderedBroadcast) {
+                resultCode = TaskerPlugin.Setting.RESULT_CODE_PENDING
+            }
 
-        // 4. 设置 RESULT_CODE_PENDING
-        if (isOrderedBroadcast) {
-            resultCode = RESULT_CODE_PENDING
-            log("set resultCode = RESULT_CODE_PENDING ($RESULT_CODE_PENDING)")
-        } else {
-            log("NOT ordered broadcast, cannot set pending result!")
+            when (captureMode) {
+                TaskerPluginConstants.MODE_ACCESSIBILITY -> {
+                    val accService = OcrAccessibilityService.instance
+                    if (accService != null) {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                            accService.captureAndRecognize(intent, targetText, isRegex)
+                        } else {
+                            signalError(context, intent, "无障碍截图仅支持 Android 11+")
+                        }
+                    } else {
+                        signalError(context, intent, "未开启无障碍服务")
+                    }
+                }
+                TaskerPluginConstants.MODE_FILE_PATH -> {
+                    if (filePath.isEmpty()) {
+                        signalError(context, intent, "文件路径为空")
+                        return
+                    }
+                    val serviceIntent = Intent(context, ScreenCaptureService::class.java).apply {
+                        putExtra("fireIntent", intent)
+                        putExtra("targetText", targetText)
+                        putExtra("isRegex", isRegex)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, filePath)
+                    }
+                    if (android.os.Build.VERSION.SDK_INT >= 26) {
+                        context.startForegroundService(serviceIntent)
+                    } else {
+                        context.startService(serviceIntent)
+                    }
+                }
+                else -> {
+                    // Default Mode: MediaProjection
+                    val activityIntent = Intent(context, ScreenCaptureActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("fireIntent", intent)
+                        putExtra("targetText", targetText)
+                        putExtra("isRegex", isRegex)
+                    }
+                    context.startActivity(activityIntent)
+                }
+            }
         }
+    }
 
-        // 5. 启动 ScreenCaptureActivity
-        log("--- starting ScreenCaptureActivity ---")
-        val captureIntent = Intent(context, ScreenCaptureActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("targetText", targetText)
-            putExtra("isRegex", isRegex)
-            putExtra("fireIntent", intent)
+    private fun signalError(context: Context, fireIntent: Intent, errorMessage: String) {
+        val varsBundle = android.os.Bundle().apply {
+            putString("%ocr_error", errorMessage)
         }
-        log("captureIntent created")
-        context.startActivity(captureIntent)
-        log("startActivity called, onReceive returning")
+        TaskerPlugin.Setting.signalFinish(context, fireIntent, TaskerPlugin.Setting.RESULT_CODE_FAILED, varsBundle)
     }
 
     private fun log(msg: String) {
         Log.d(TAG, "[$SUB_TAG] $msg")
-        // Also write to file when context is available
     }
 }
