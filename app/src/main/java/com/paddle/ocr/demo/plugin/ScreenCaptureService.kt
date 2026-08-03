@@ -191,7 +191,10 @@ class ScreenCaptureService : Service() {
             } else {
                 log("IMAGE IS NULL - screen capture failed!")
                 scope.launch {
-                    signalTaskerFinish(fireIntent, false, Bundle())
+                    val bundle = Bundle().apply {
+                        putString("%ocr_error", "截屏失败，未获取到有效图像数据")
+                    }
+                    signalTaskerFinish(fireIntent, false, bundle)
                     stopSelf()
                 }
             }
@@ -204,7 +207,12 @@ class ScreenCaptureService : Service() {
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
             log("OCR ENGINE IS NULL - not initialized!")
-            if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
+            if (!isAppTest) {
+                val bundle = Bundle().apply {
+                    putString("%ocr_error", "OCR引擎未初始化")
+                }
+                signalTaskerFinish(fireIntent, false, bundle)
+            }
             return
         }
         log("OCR engine available")
@@ -286,7 +294,12 @@ class ScreenCaptureService : Service() {
         } catch (e: Exception) {
             log("OCR EXCEPTION: ${e.message}")
             Log.e(TAG, "[$SUB_TAG] OCR processing failed", e)
-            if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
+            if (!isAppTest) {
+                val bundle = Bundle().apply {
+                    putString("%ocr_error", "OCR 识别出错: ${e.message}")
+                }
+                signalTaskerFinish(fireIntent, false, bundle)
+            }
         }
     }
 
