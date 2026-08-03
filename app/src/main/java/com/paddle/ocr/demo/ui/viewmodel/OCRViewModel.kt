@@ -26,9 +26,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.content.Context
+import android.content.Intent
+import com.paddle.ocr.demo.plugin.ScreenCaptureActivity
 
 class OCRViewModel : ViewModel() {
 
@@ -74,6 +76,16 @@ class OCRViewModel : ViewModel() {
                     }
                     is OCRApplication.ModelState.Error -> _uiState.value = UIState.Error(modelState.message)
                 }
+            }
+        }
+        viewModelScope.launch {
+            OCRApplication.instance.appTestResult.collect { (bitmap, result) ->
+                _uiState.value = UIState.Result(bitmap, result)
+                _timing.value = TimingInfo(
+                    detectionMs = result.detectionTimeMs,
+                    recognitionMs = result.recognitionTimeMs,
+                    totalMs = result.totalTimeMs,
+                )
             }
         }
     }
@@ -144,6 +156,14 @@ class OCRViewModel : ViewModel() {
         } else {
             app.retryLoadModels()
         }
+    }
+
+    fun startScreenshotTest(context: Context) {
+        _uiState.value = UIState.Processing(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)) // Mock processing state
+        val intent = Intent(context, ScreenCaptureActivity::class.java).apply {
+            putExtra("isAppTest", true)
+        }
+        context.startActivity(intent)
     }
 
     fun copyAllResults(results: List<OCRResult>) {

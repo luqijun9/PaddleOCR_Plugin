@@ -29,12 +29,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.paddle.ocr.demo.ui.component.*
 import com.paddle.ocr.demo.ui.viewmodel.OCRViewModel
 
 @Composable
 fun HomeScreen(viewModel: OCRViewModel = viewModel()) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val timing by viewModel.timing.collectAsState()
 
@@ -52,6 +54,7 @@ fun HomeScreen(viewModel: OCRViewModel = viewModel()) {
                     Spacer(modifier = Modifier.height(32.dp))
                     ImagePicker(
                         onGalleryClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        onScreenshotClick = { viewModel.startScreenshotTest(context) },
                         onSampleClick = { viewModel.onSampleImageClicked(it) },
                         sampleImages = emptyList(),
                     )
@@ -87,6 +90,7 @@ fun HomeScreen(viewModel: OCRViewModel = viewModel()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     ImagePicker(
                         onGalleryClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        onScreenshotClick = { viewModel.startScreenshotTest(context) },
                         onSampleClick = { viewModel.onSampleImageClicked(it) },
                         sampleImages = emptyList(),
                     )

@@ -23,10 +23,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
+import com.paddle.ocr.model.OCRRunResult
 
 class OCRApplication : Application() {
 
@@ -40,6 +43,7 @@ class OCRApplication : Application() {
     private val _modelState = MutableStateFlow<ModelState>(ModelState.Loading)
 
     val modelState: StateFlow<ModelState> = _modelState.asStateFlow()
+    val appTestResult = MutableSharedFlow<Pair<Bitmap, OCRRunResult>>(extraBufferCapacity = 1)
 
     val ocr: PaddleOCR?
         get() = (_modelState.value as? ModelState.Ready)?.ocr

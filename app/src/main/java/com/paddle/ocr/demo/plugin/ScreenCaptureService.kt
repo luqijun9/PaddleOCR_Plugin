@@ -12,6 +12,9 @@ import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.media.Image
 import android.media.ImageReader
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
@@ -64,17 +67,18 @@ class ScreenCaptureService : Service() {
         val targetText = intent.getStringExtra("targetText") ?: ""
         val isRegex = intent.getBooleanExtra("isRegex", false)
         val fireIntent: Intent? = intent.getParcelableExtra("fireIntent")
+        val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = projectionManager.getMediaProjection(resultCode, data)
 
-        captureScreenAndOcr(targetText, isRegex, fireIntent)
+        captureScreenAndOcr(targetText, isRegex, fireIntent, isAppTest)
 
         return START_NOT_STICKY
     }
 
     @SuppressLint("WrongConstant")
-    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, fireIntent: Intent?) {
+    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
         windowManager.defaultDisplay.getRealMetrics(metrics)
@@ -83,6 +87,14 @@ class ScreenCaptureService : Service() {
         val density = metrics.densityDpi
 
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+        
+        mediaProjection?.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                super.onStop()
+                mediaProjection?.unregisterCallback(this)
+            }
+        }, null)
+
         val virtualDisplay = mediaProjection?.createVirtualDisplay(
             "ScreenCapture",
             width, height, density,
@@ -119,18 +131,18 @@ class ScreenCaptureService : Service() {
                 mediaProjection?.stop()
 
                 scope.launch {
-                    processOcr(croppedBitmap, targetText, isRegex, fireIntent)
+                    processOcr(croppedBitmap, targetText, isRegex, fireIntent, isAppTest)
                     stopSelf()
                 }
             }
         }, null)
     }
 
-    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, fireIntent: Intent?) {
+    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
             Log.e(TAG, "OCR Engine not initialized!")
-            signalTaskerFinish(fireIntent, false, Bundle())
+            if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
             return
         }
 
@@ -188,28 +200,49 @@ class ScreenCaptureService : Service() {
             }
 
             Log.d(TAG, "OCR finished. Result length: ${fullTextBuilder.length}, matchFound: $matchFound")
-            signalTaskerFinish(fireIntent, true, bundle)
+            if (isAppTest) {
+                OCRApplication.instance.appTestResult.emit(Pair(bitmap, result))
+            } else {
+                signalTaskerFinish(fireIntent, true, bundle)
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "OCR processing failed", e)
-            signalTaskerFinish(fireIntent, false, Bundle())
+            if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
         }
     }
 
     private fun signalTaskerFinish(fireIntent: Intent?, success: Boolean, varsBundle: Bundle) {
         if (fireIntent == null) return
-        val taskerActionId = fireIntent.getByteArrayExtra("net.dinglisch.android.tasker.extras.PASS_THROUGH_MESSAGE_ID")
         
-        val resultIntent = Intent("net.dinglisch.android.tasker.ACTION_EDIT_EVENT_SIGNAL_FINISH")
-        resultIntent.putExtra("net.dinglisch.android.tasker.extras.PASS_THROUGH_MESSAGE_ID", taskerActionId)
-        
-        if (!success) {
-            resultIntent.putExtra("net.dinglisch.android.tasker.extras.SIGNAL_STATE", 2) // FAILED
-        } else {
-            resultIntent.putExtra("net.dinglisch.android.tasker.extras.SIGNAL_STATE", 1) // OK
-            resultIntent.putExtra("net.dinglisch.android.tasker.extras.VARIABLES", varsBundle)
+        val completionIntentString = fireIntent.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
+        if (completionIntentString != null) {
+            try {
+                val completionIntent = Intent.parseUri(completionIntentString, Intent.URI_INTENT_SCHEME)
+                
+                val resultCode = if (success) TaskerPluginConstants.RESULT_CODE_OK else TaskerPluginConstants.RESULT_CODE_FAILED
+                completionIntent.putExtra(TaskerPluginConstants.EXTRA_RESULT_CODE, resultCode)
+                
+                if (success) {
+                    completionIntent.putExtra(TaskerPluginConstants.EXTRA_VARIABLES, varsBundle)
+                }
+                
+                // For Tasker Android 8+ background limits, we might need to start a service or broadcast
+                // Tasker's completion intents are typically Broadcasts.
+                sendBroadcast(completionIntent)
+                
+                // Show a Toast so the user knows what happened
+                Handler(Looper.getMainLooper()).post {
+                    if (success) {
+                        Toast.makeText(this, "OCR完成，已返回变量到Tasker", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "OCR失败或未匹配", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
-        sendBroadcast(resultIntent)
     }
 
     private fun createNotificationChannel() {

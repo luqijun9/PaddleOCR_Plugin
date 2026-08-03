@@ -10,6 +10,12 @@ object TaskerPluginConstants {
     const val EXTRA_RELEVANT_VARIABLES = "net.dinglisch.android.tasker.RELEVANT_VARIABLES"
     const val EXTRA_REQUESTED_TIMEOUT = "net.dinglisch.android.tasker.extras.REQUESTED_TIMEOUT"
     
+    // Completion intent keys
+    const val EXTRA_PLUGIN_COMPLETION_INTENT = "net.dinglisch.android.tasker.extras.COMPLETION_INTENT"
+    const val EXTRA_RESULT_CODE = "net.dinglisch.android.tasker.extras.RESULT_CODE"
+    const val RESULT_CODE_OK = -1
+    const val RESULT_CODE_FAILED = 2
+    
     // Our custom bundle keys
     const val BUNDLE_KEY_TARGET_TEXT = "target_text"
     const val BUNDLE_KEY_IS_REGEX = "is_regex"

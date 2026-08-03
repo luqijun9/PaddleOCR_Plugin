@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ImagePicker(
     onGalleryClick: () -> Unit,
+    onScreenshotClick: () -> Unit,
     onSampleClick: (Int) -> Unit,
     sampleImages: List<Int>,
     modifier: Modifier = Modifier,
@@ -55,6 +56,13 @@ fun ImagePicker(
         Button(onClick = onGalleryClick) {
             Icon(Icons.Default.Add, contentDescription = null)
             Text("  Select from Gallery", modifier = Modifier.padding(start = 8.dp))
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = onScreenshotClick) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Text("  Test Screen Capture OCR", modifier = Modifier.padding(start = 8.dp))
         }
 
         if (sampleImages.isNotEmpty()) {

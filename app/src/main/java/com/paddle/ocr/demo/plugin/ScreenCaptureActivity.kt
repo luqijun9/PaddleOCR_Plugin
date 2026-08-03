@@ -18,6 +18,7 @@ class ScreenCaptureActivity : Activity() {
     private var targetText: String = ""
     private var isRegex: Boolean = false
     private var fireIntent: Intent? = null
+    private var isAppTest: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,6 +27,7 @@ class ScreenCaptureActivity : Activity() {
         targetText = intent.getStringExtra("targetText") ?: ""
         isRegex = intent.getBooleanExtra("isRegex", false)
         fireIntent = intent.getParcelableExtra("fireIntent")
+        isAppTest = intent.getBooleanExtra("isAppTest", false)
 
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), REQUEST_CODE_SCREEN_CAPTURE)
@@ -42,6 +44,7 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("targetText", targetText)
                     putExtra("isRegex", isRegex)
                     putExtra("fireIntent", fireIntent)
+                    putExtra("isAppTest", isAppTest)
                 }
                 // Start foreground service
                 startForegroundService(serviceIntent)
