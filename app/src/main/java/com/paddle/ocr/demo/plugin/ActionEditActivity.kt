@@ -43,6 +43,12 @@ class ActionEditActivity : ComponentActivity() {
     private lateinit var regionDrawLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
     private lateinit var screenCaptureLauncherActivity: androidx.activity.result.ActivityResultLauncher<Intent>
 
+    private var pendingRestrictRegion = false
+    private var pendingRegionLeft = "0.0"
+    private var pendingRegionTop = "0.0"
+    private var pendingRegionRight = "1.0"
+    private var pendingRegionBottom = "1.0"
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.getFloatArrayExtra("REGION_RESULT")?.let {
@@ -73,7 +79,14 @@ class ActionEditActivity : ComponentActivity() {
                 // of this Activity (same task stack). Data returns via setResult.
                 FloatingSelectionService.screenshotCallback = {
                     runOnUiThread {
-                        regionDrawLauncher.launch(Intent(this, RegionDrawActivity::class.java))
+                        val intent = Intent(this, RegionDrawActivity::class.java).apply {
+                            putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, pendingRestrictRegion)
+                            putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, pendingRegionLeft)
+                            putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, pendingRegionTop)
+                            putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, pendingRegionRight)
+                            putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, pendingRegionBottom)
+                        }
+                        regionDrawLauncher.launch(intent)
                     }
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -135,7 +148,13 @@ class ActionEditActivity : ComponentActivity() {
                         initialRegionRight = initialRegionRight,
                         initialRegionBottom = initialRegionBottom,
                         regionResultFlow = regionResultFlow,
-                        onLaunchScreenCapture = {
+                        onLaunchScreenCapture = { restrict, left, top, right, bottom ->
+                            pendingRestrictRegion = restrict
+                            pendingRegionLeft = left
+                            pendingRegionTop = top
+                            pendingRegionRight = right
+                            pendingRegionBottom = bottom
+
                             if (Settings.canDrawOverlays(this)) {
                                 val pm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as android.media.projection.MediaProjectionManager
                                 screenCaptureLauncherActivity.launch(pm.createScreenCaptureIntent())
@@ -237,7 +256,7 @@ fun ActionEditScreen(
     initialRegionRight: String,
     initialRegionBottom: String,
     regionResultFlow: kotlinx.coroutines.flow.StateFlow<FloatArray?>,
-    onLaunchScreenCapture: () -> Unit,
+    onLaunchScreenCapture: (Boolean, String, String, String, String) -> Unit,
     onSave: (Int, String, Boolean, Boolean, Boolean, String, Boolean, String, String, String, String) -> Unit
 ) {
     val context = LocalContext.current
@@ -595,7 +614,7 @@ fun ActionEditScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = { onLaunchScreenCapture() },
+                            onClick = { onLaunchScreenCapture(restrictRegion, regionLeft, regionTop, regionRight, regionBottom) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(stringResource(R.string.region_draw))
