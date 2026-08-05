@@ -31,11 +31,11 @@
     <string name="appops_title">💡 录屏模式免弹窗截图：\n如果您有 Root 或 Shizuku，可通过执行以下 ADB 命令隐式授予录屏权限，从此使用“录屏权限”模式不再有确认弹窗：\nappops set com.paddle.ocr.demo PROJECT_MEDIA allow</string>
     
     <!-- Tasker Blurb -->
-    <string name="blurb_mode_screen">录屏模式 </string>
-    <string name="blurb_mode_acc">无障碍模式 </string>
-    <string name="blurb_no_image">无图片 </string>
-    <string name="blurb_no_search">无查找</string>
-    <string name="blurb_search">查找: </string>
+    <string name="blurb_mode_screen">"录屏模式 "</string>
+    <string name="blurb_mode_acc">"无障碍模式 "</string>
+    <string name="blurb_no_image">"无图片 "</string>
+    <string name="blurb_no_search">"无查找"</string>
+    <string name="blurb_search">"查找: "</string>
     
     <!-- Tasker Variables -->
     <string name="var_full_text">%%ocr_full_text\n全量文本\n包含所有拼在一起的文本结果</string>

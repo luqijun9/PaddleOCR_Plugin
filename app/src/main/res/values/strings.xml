@@ -31,11 +31,11 @@
     <string name="appops_title">💡 Screen Record without confirmation:\nIf you have Root or Shizuku, you can run the following ADB command to silently grant screen recording permission:\nappops set com.paddle.ocr.demo PROJECT_MEDIA allow</string>
     
     <!-- Tasker Blurb -->
-    <string name="blurb_mode_screen">Screen Mode </string>
-    <string name="blurb_mode_acc">Accessibility Mode </string>
-    <string name="blurb_no_image">No Image </string>
-    <string name="blurb_no_search">No search</string>
-    <string name="blurb_search">Search: </string>
+    <string name="blurb_mode_screen">"Screen Record "</string>
+    <string name="blurb_mode_acc">"Accessibility Mode "</string>
+    <string name="blurb_no_image">"No Image "</string>
+    <string name="blurb_no_search">"No search"</string>
+    <string name="blurb_search">"Search: "</string>
     
     <!-- Tasker Variables -->
     <string name="var_full_text">%%ocr_full_text\nFull Text\nContains all text results combined</string>
