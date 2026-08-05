@@ -21,6 +21,10 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -94,7 +98,8 @@ class ActionEditActivity : ComponentActivity() {
                 } else {
                     startService(serviceIntent)
                 }
-                Toast.makeText(this, "悬浮窗已启动，请切换到目标应用进行框选", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "悬浮窗已启动，已自动为您切回桌面", Toast.LENGTH_LONG).show()
+                moveTaskToBack(true)
             }
         }
 
@@ -583,41 +588,182 @@ fun ActionEditScreen(
 
                     if (restrictRegion) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = regionLeft,
-                                onValueChange = { regionLeft = it },
-                                label = { Text(stringResource(R.string.region_left)) },
-                                modifier = Modifier.weight(1f)
+
+                        // 1. 9:16 Miniature Screen Preview Card
+                        val displayMetrics = context.resources.displayMetrics
+                        val screenW = displayMetrics.widthPixels
+                        val screenH = displayMetrics.heightPixels
+
+                        val leftVal = regionLeft.toFloatOrNull()?.coerceIn(0f, 1f) ?: 0f
+                        val topVal = regionTop.toFloatOrNull()?.coerceIn(0f, 1f) ?: 0f
+                        val rightVal = regionRight.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
+                        val bottomVal = regionBottom.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
+
+                        val leftPx = (leftVal * screenW).toInt()
+                        val topPx = (topVal * screenH).toInt()
+                        val rightPx = (rightVal * screenW).toInt()
+                        val bottomPx = (bottomVal * screenH).toInt()
+                        val widthPx = maxOf(0, rightPx - leftPx)
+                        val heightPx = maxOf(0, bottomPx - topPx)
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Mini Screen Container (9:16 Aspect Ratio)
+                            Box(
+                                modifier = Modifier
+                                    .width(135.dp)
+                                    .height(240.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface,
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(4.dp)
+                            ) {
+                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                    val w = size.width
+                                    val h = size.height
+
+                                    val l = leftVal * w
+                                    val t = topVal * h
+                                    val r = rightVal * w
+                                    val b = bottomVal * h
+
+                                    // Dark overlay background representing screen
+                                    drawRect(color = androidx.compose.ui.graphics.Color(0xFF202124))
+
+                                    // Selection Box
+                                    if (r > l && b > t) {
+                                        drawRect(
+                                            color = androidx.compose.ui.graphics.Color(0x5500FF00),
+                                            topLeft = androidx.compose.ui.geometry.Offset(l, t),
+                                            size = androidx.compose.ui.geometry.Size(r - l, b - t)
+                                        )
+                                        drawRect(
+                                            color = androidx.compose.ui.graphics.Color(0xFF00FF00),
+                                            topLeft = androidx.compose.ui.geometry.Offset(l, t),
+                                            size = androidx.compose.ui.geometry.Size(r - l, b - t),
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Pixel Summary
+                            Text(
+                                text = "X: ${leftPx}px ~ ${rightPx}px  |  Y: ${topPx}px ~ ${bottomPx}px",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            OutlinedTextField(
-                                value = regionTop,
-                                onValueChange = { regionTop = it },
-                                label = { Text(stringResource(R.string.region_top)) },
-                                modifier = Modifier.weight(1f)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "选框尺寸: ${widthPx}px × ${heightPx}px (屏幕: ${screenW} × ${screenH})",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = regionRight,
-                                onValueChange = { regionRight = it },
-                                label = { Text(stringResource(R.string.region_right)) },
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = regionBottom,
-                                onValueChange = { regionBottom = it },
-                                label = { Text(stringResource(R.string.region_bottom)) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        // Primary Draw / Edit Button
                         Button(
                             onClick = { onLaunchScreenCapture(restrictRegion, regionLeft, regionTop, regionRight, regionBottom) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(stringResource(R.string.region_draw))
+                            Text(stringResource(R.string.region_draw), fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Collapsible Advanced Manual Inputs in Pixel (px)
+                        var showAdvancedInput by remember { mutableStateOf(false) }
+
+                        var pxLeftText by remember(regionLeft, screenW) { mutableStateOf(leftPx.toString()) }
+                        var pxTopText by remember(regionTop, screenH) { mutableStateOf(topPx.toString()) }
+                        var pxRightText by remember(regionRight, screenW) { mutableStateOf(rightPx.toString()) }
+                        var pxBottomText by remember(regionBottom, screenH) { mutableStateOf(bottomPx.toString()) }
+
+                        TextButton(
+                            onClick = { showAdvancedInput = !showAdvancedInput },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text(if (showAdvancedInput) "隐藏高级像素修改 ▲" else "高级：手动修改像素坐标 (px) ▼")
+                        }
+
+                        AnimatedVisibility(visible = showAdvancedInput) {
+                            Column {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = pxLeftText,
+                                        onValueChange = { input ->
+                                            pxLeftText = input
+                                            input.toFloatOrNull()?.let { px ->
+                                                if (screenW > 0) {
+                                                    regionLeft = String.format(java.util.Locale.US, "%.4f", (px / screenW).coerceIn(0f, 1f))
+                                                }
+                                            }
+                                        },
+                                        label = { Text("左边缘 (px)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                    OutlinedTextField(
+                                        value = pxTopText,
+                                        onValueChange = { input ->
+                                            pxTopText = input
+                                            input.toFloatOrNull()?.let { px ->
+                                                if (screenH > 0) {
+                                                    regionTop = String.format(java.util.Locale.US, "%.4f", (px / screenH).coerceIn(0f, 1f))
+                                                }
+                                            }
+                                        },
+                                        label = { Text("上边缘 (px)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = pxRightText,
+                                        onValueChange = { input ->
+                                            pxRightText = input
+                                            input.toFloatOrNull()?.let { px ->
+                                                if (screenW > 0) {
+                                                    regionRight = String.format(java.util.Locale.US, "%.4f", (px / screenW).coerceIn(0f, 1f))
+                                                }
+                                            }
+                                        },
+                                        label = { Text("右边缘 (px)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                    OutlinedTextField(
+                                        value = pxBottomText,
+                                        onValueChange = { input ->
+                                            pxBottomText = input
+                                            input.toFloatOrNull()?.let { px ->
+                                                if (screenH > 0) {
+                                                    regionBottom = String.format(java.util.Locale.US, "%.4f", (px / screenH).coerceIn(0f, 1f))
+                                                }
+                                            }
+                                        },
+                                        label = { Text("下边缘 (px)") },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true
+                                    )
+                                }
+                            }
                         }
                     }
                 }
