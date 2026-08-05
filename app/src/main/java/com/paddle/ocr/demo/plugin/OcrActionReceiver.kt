@@ -51,6 +51,11 @@ class OcrActionReceiver : BroadcastReceiver() {
             val isIgnoreCase = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, true)
             val captureMode = bundle.getInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, TaskerPluginConstants.MODE_MEDIA_PROJECTION)
             val filePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, "")
+            val restrictRegion = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, false)
+            val regionLeft = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, "0.0")
+            val regionTop = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, "0.0")
+            val regionRight = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, "1.0")
+            val regionBottom = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, "1.0")
 
             // IMPORTANT: For asynchronous Tasker plugins, we MUST return RESULT_CODE_PENDING (3)
             // in the BroadcastReceiver's resultCode, so Tasker knows to wait for the completion intent.
@@ -63,7 +68,10 @@ class OcrActionReceiver : BroadcastReceiver() {
                     val accService = OcrAccessibilityService.instance
                     if (accService != null) {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                            accService.captureAndRecognize(intent, targetText, isRegex, isExactMatch, isIgnoreCase)
+                            accService.captureAndRecognize(
+                                intent, targetText, isRegex, isExactMatch, isIgnoreCase,
+                                restrictRegion, regionLeft, regionTop, regionRight, regionBottom
+                            )
                         } else {
                             signalError(context, intent, "无障碍截图仅支持 Android 11+")
                         }
@@ -83,6 +91,11 @@ class OcrActionReceiver : BroadcastReceiver() {
                         putExtra("isExactMatch", isExactMatch)
                         putExtra("isIgnoreCase", isIgnoreCase)
                         putExtra(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, filePath)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, restrictRegion)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, regionLeft)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, regionTop)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, regionRight)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, regionBottom)
                     }
                     if (android.os.Build.VERSION.SDK_INT >= 26) {
                         context.startForegroundService(serviceIntent)
@@ -99,6 +112,11 @@ class OcrActionReceiver : BroadcastReceiver() {
                         putExtra("isRegex", isRegex)
                         putExtra("isExactMatch", isExactMatch)
                         putExtra("isIgnoreCase", isIgnoreCase)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, restrictRegion)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, regionLeft)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, regionTop)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, regionRight)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, regionBottom)
                     }
                     context.startActivity(activityIntent)
                 }

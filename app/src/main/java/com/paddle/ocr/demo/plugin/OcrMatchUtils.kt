@@ -6,8 +6,55 @@ import com.paddle.ocr.model.OCRRunResult
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class CropResult(
+    val croppedBitmap: android.graphics.Bitmap,
+    val offsetX: Int,
+    val offsetY: Int,
+    val isCropped: Boolean
+)
+
 object OcrMatchUtils {
     private const val TAG = "OcrMatchUtils"
+
+    fun cropBitmapIfNeeded(
+        bitmap: android.graphics.Bitmap,
+        restrictRegion: Boolean,
+        regionLeft: String,
+        regionTop: String,
+        regionRight: String,
+        regionBottom: String
+    ): CropResult {
+        if (!restrictRegion) {
+            return CropResult(bitmap, 0, 0, false)
+        }
+        return try {
+            val leftPct = regionLeft.toFloat().coerceIn(0f, 1f)
+            val topPct = regionTop.toFloat().coerceIn(0f, 1f)
+            val rightPct = regionRight.toFloat().coerceIn(0f, 1f)
+            val bottomPct = regionBottom.toFloat().coerceIn(0f, 1f)
+
+            val bW = bitmap.width
+            val bH = bitmap.height
+
+            val cropLeft = (leftPct * bW).toInt().coerceIn(0, bW)
+            val cropTop = (topPct * bH).toInt().coerceIn(0, bH)
+            val cropRight = (rightPct * bW).toInt().coerceIn(0, bW)
+            val cropBottom = (bottomPct * bH).toInt().coerceIn(0, bH)
+
+            val cropWidth = cropRight - cropLeft
+            val cropHeight = cropBottom - cropTop
+
+            if (cropWidth > 0 && cropHeight > 0) {
+                val cropped = android.graphics.Bitmap.createBitmap(bitmap, cropLeft, cropTop, cropWidth, cropHeight)
+                CropResult(cropped, cropLeft, cropTop, true)
+            } else {
+                CropResult(bitmap, 0, 0, false)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to crop bitmap: ${e.message}", e)
+            CropResult(bitmap, 0, 0, false)
+        }
+    }
 
     fun processOcrResultToBundle(
         result: OCRRunResult,

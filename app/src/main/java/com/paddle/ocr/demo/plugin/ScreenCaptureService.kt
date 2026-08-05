@@ -227,41 +227,21 @@ class ScreenCaptureService : Service() {
 
         try {
             // 裁剪逻辑
-            var finalBitmap = bitmap
-            var offsetX = 0
-            var offsetY = 0
-
-            if (restrictRegion) {
-                try {
-                    val leftPct = regionLeft.toFloat().coerceIn(0f, 1f)
-                    val topPct = regionTop.toFloat().coerceIn(0f, 1f)
-                    val rightPct = regionRight.toFloat().coerceIn(0f, 1f)
-                    val bottomPct = regionBottom.toFloat().coerceIn(0f, 1f)
-
-                    val bW = bitmap.width
-                    val bH = bitmap.height
-
-                    val cropLeft = (leftPct * bW).toInt().coerceIn(0, bW)
-                    val cropTop = (topPct * bH).toInt().coerceIn(0, bH)
-                    val cropRight = (rightPct * bW).toInt().coerceIn(0, bW)
-                    val cropBottom = (bottomPct * bH).toInt().coerceIn(0, bH)
-                    
-                    val cropWidth = cropRight - cropLeft
-                    val cropHeight = cropBottom - cropTop
-                    
-                    if (cropWidth > 0 && cropHeight > 0) {
-                        finalBitmap = Bitmap.createBitmap(bitmap, cropLeft, cropTop, cropWidth, cropHeight)
-                        offsetX = cropLeft
-                        offsetY = cropTop
-                        log("Cropped bitmap: ${cropWidth}x${cropHeight} at ($cropLeft, $cropTop)")
-                    }
-                } catch (e: Exception) {
-                    log("Failed to parse crop percentages: ${e.message}")
-                }
+            val cropResult = OcrMatchUtils.cropBitmapIfNeeded(
+                bitmap, restrictRegion, regionLeft, regionTop, regionRight, regionBottom
+            )
+            val finalBitmap = cropResult.croppedBitmap
+            val offsetX = cropResult.offsetX
+            val offsetY = cropResult.offsetY
+            if (cropResult.isCropped) {
+                log("Cropped bitmap: ${finalBitmap.width}x${finalBitmap.height} at ($offsetX, $offsetY)")
             }
 
             log("calling ocrEngine.recognize()...")
             val result = ocrEngine.recognize(finalBitmap)
+            if (cropResult.isCropped) {
+                finalBitmap.recycle()
+            }
             log("recognize() returned. results count: ${result.results.size}")
 
             if (result.results.isEmpty()) {

@@ -80,6 +80,11 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("isIgnoreCase", isIgnoreCase)
                     putExtra("fireIntent", fireIntent)
                     putExtra("isAppTest", isAppTest)
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, intent.getBooleanExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, false))
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT) ?: "0.0")
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP) ?: "0.0")
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT) ?: "1.0")
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM) ?: "1.0")
                 }
                 log("serviceIntent created, calling startForegroundService")
                 startForegroundService(serviceIntent)

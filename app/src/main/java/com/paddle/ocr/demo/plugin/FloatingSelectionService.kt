@@ -28,6 +28,9 @@ class FloatingSelectionService : Service() {
     companion object {
         const val TAG = "FloatingSelectionService"
         var captureBitmap: Bitmap? = null
+        // Set by ActionEditActivity before starting the service.
+        // Invoked on main thread when screenshot is ready.
+        var screenshotCallback: (() -> Unit)? = null
     }
 
     private var windowManager: WindowManager? = null
@@ -154,19 +157,28 @@ class FloatingSelectionService : Service() {
                     Bitmap.Config.ARGB_8888
                 )
                 bitmap.copyPixelsFromBuffer(buffer)
-                val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                val croppedBitmap = if (rowPadding == 0) {
+                    bitmap
+                } else {
+                    val cropped = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                    bitmap.recycle()
+                    cropped
+                }
                 image.close()
 
                 captureBitmap = croppedBitmap
-                
+
                 virtualDisplay?.release()
                 mediaProjection?.stop()
 
-                val drawIntent = Intent(this, RegionDrawActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // Notify ActionEditActivity via callback instead of launching Activity
+                // directly from a Service (which is unreliable across different task stacks).
+                val cb = screenshotCallback
+                screenshotCallback = null
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    cb?.invoke()
                 }
-                startActivity(drawIntent)
-                
+
                 stopSelf()
             }
         }, null)

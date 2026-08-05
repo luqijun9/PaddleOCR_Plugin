@@ -57,7 +57,18 @@ class OcrAccessibilityService : AccessibilityService() {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    fun captureAndRecognize(fireIntent: Intent, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean) {
+    fun captureAndRecognize(
+        fireIntent: Intent,
+        targetText: String,
+        isRegex: Boolean,
+        isExactMatch: Boolean,
+        isIgnoreCase: Boolean,
+        restrictRegion: Boolean = false,
+        regionLeft: String = "0.0",
+        regionTop: String = "0.0",
+        regionRight: String = "1.0",
+        regionBottom: String = "1.0"
+    ) {
         Log.d(TAG, "OcrAccessibilityService captureAndRecognize triggered")
         
         takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
@@ -71,7 +82,10 @@ class OcrAccessibilityService : AccessibilityService() {
                     // Start OCR process
                     val softwareBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
                     hardwareBuffer.close()
-                    performOcr(softwareBitmap, fireIntent, targetText, isRegex, isExactMatch, isIgnoreCase)
+                    performOcr(
+                        softwareBitmap, fireIntent, targetText, isRegex, isExactMatch, isIgnoreCase,
+                        restrictRegion, regionLeft, regionTop, regionRight, regionBottom
+                    )
                 } else {
                     hardwareBuffer.close()
                     signalError(fireIntent, "无法从 HardwareBuffer 转换 Bitmap")
@@ -85,7 +99,19 @@ class OcrAccessibilityService : AccessibilityService() {
         })
     }
 
-    private fun performOcr(bitmap: Bitmap, fireIntent: Intent, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean) {
+    private fun performOcr(
+        bitmap: Bitmap,
+        fireIntent: Intent,
+        targetText: String,
+        isRegex: Boolean,
+        isExactMatch: Boolean,
+        isIgnoreCase: Boolean,
+        restrictRegion: Boolean,
+        regionLeft: String,
+        regionTop: String,
+        regionRight: String,
+        regionBottom: String
+    ) {
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 val ocrEngine = OCRApplication.instance.ocr
@@ -94,8 +120,15 @@ class OcrAccessibilityService : AccessibilityService() {
                     bitmap.recycle()
                     return@launch
                 }
-                
-                val result = ocrEngine.recognize(bitmap)
+
+                val cropResult = OcrMatchUtils.cropBitmapIfNeeded(
+                    bitmap, restrictRegion, regionLeft, regionTop, regionRight, regionBottom
+                )
+
+                val result = ocrEngine.recognize(cropResult.croppedBitmap)
+                if (cropResult.isCropped) {
+                    cropResult.croppedBitmap.recycle()
+                }
                 bitmap.recycle()
                 
                 val varsBundle = OcrMatchUtils.processOcrResultToBundle(
@@ -103,7 +136,9 @@ class OcrAccessibilityService : AccessibilityService() {
                     targetText = targetText,
                     isRegex = isRegex,
                     isExactMatch = isExactMatch,
-                    isIgnoreCase = isIgnoreCase
+                    isIgnoreCase = isIgnoreCase,
+                    offsetX = cropResult.offsetX,
+                    offsetY = cropResult.offsetY
                 )
 
                 Handler(Looper.getMainLooper()).post {

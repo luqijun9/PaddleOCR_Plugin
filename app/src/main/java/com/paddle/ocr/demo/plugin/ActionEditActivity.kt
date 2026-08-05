@@ -40,6 +40,8 @@ import com.paddle.ocr.demo.ui.theme.PPOCRTheme
 
 class ActionEditActivity : ComponentActivity() {
     private var regionResultFlow = kotlinx.coroutines.flow.MutableStateFlow<FloatArray?>(null)
+    private lateinit var regionDrawLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
+    private lateinit var screenCaptureLauncherActivity: androidx.activity.result.ActivityResultLauncher<Intent>
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -51,6 +53,37 @@ class ActionEditActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Launchers must be registered before setContent
+        regionDrawLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data?.getFloatArrayExtra("REGION_RESULT")?.let {
+                    regionResultFlow.value = it
+                }
+            }
+        }
+
+        screenCaptureLauncherActivity = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                val serviceIntent = Intent(this, FloatingSelectionService::class.java).apply {
+                    putExtra("resultCode", result.resultCode)
+                    putExtra("data", result.data)
+                }
+                // When screenshot is ready, launch RegionDrawActivity as a CHILD
+                // of this Activity (same task stack). Data returns via setResult.
+                FloatingSelectionService.screenshotCallback = {
+                    runOnUiThread {
+                        regionDrawLauncher.launch(Intent(this, RegionDrawActivity::class.java))
+                    }
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+                Toast.makeText(this, "悬浮窗已启动，请切换到目标应用进行框选", Toast.LENGTH_LONG).show()
+            }
+        }
 
         var initialTargetText = ""
         var initialIsRegex = false
@@ -102,6 +135,19 @@ class ActionEditActivity : ComponentActivity() {
                         initialRegionRight = initialRegionRight,
                         initialRegionBottom = initialRegionBottom,
                         regionResultFlow = regionResultFlow,
+                        onLaunchScreenCapture = {
+                            if (Settings.canDrawOverlays(this)) {
+                                val pm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as android.media.projection.MediaProjectionManager
+                                screenCaptureLauncherActivity.launch(pm.createScreenCaptureIntent())
+                            } else {
+                                Toast.makeText(this, getString(R.string.overlay_permission_needed), Toast.LENGTH_SHORT).show()
+                                try {
+                                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                                } catch (e: Exception) {
+                                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
+                                }
+                            }
+                        },
                         onSave = { mode, text, regex, exact, ignoreCase, path, restrict, left, top, right, bottom ->
                             saveAndFinish(mode, text, regex, exact, ignoreCase, path, restrict, left, top, right, bottom)
                         }
@@ -191,6 +237,7 @@ fun ActionEditScreen(
     initialRegionRight: String,
     initialRegionBottom: String,
     regionResultFlow: kotlinx.coroutines.flow.StateFlow<FloatArray?>,
+    onLaunchScreenCapture: () -> Unit,
     onSave: (Int, String, Boolean, Boolean, Boolean, String, Boolean, String, String, String, String) -> Unit
 ) {
     val context = LocalContext.current
@@ -242,22 +289,7 @@ fun ActionEditScreen(
 
     val modeOptions = listOf(stringResource(R.string.mode_screen_record), stringResource(R.string.mode_accessibility), stringResource(R.string.mode_file_path))
 
-    val screenCaptureLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            val serviceIntent = Intent(context, FloatingSelectionService::class.java).apply {
-                putExtra("resultCode", result.resultCode)
-                putExtra("data", result.data)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
-            Toast.makeText(context, "悬浮窗已启动，请切换到目标应用进行框选", Toast.LENGTH_LONG).show()
-        }
-    }
+
 
     Scaffold(
         topBar = {
@@ -563,21 +595,7 @@ fun ActionEditScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = {
-                                if (Settings.canDrawOverlays(context)) {
-                                    val projectionManager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as android.media.projection.MediaProjectionManager
-                                    screenCaptureLauncher.launch(projectionManager.createScreenCaptureIntent())
-                                } else {
-                                    Toast.makeText(context, context.getString(R.string.overlay_permission_needed), Toast.LENGTH_SHORT).show()
-                                    try {
-                                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                                        context.startActivity(intent)
-                                    }
-                                }
-                            },
+                            onClick = { onLaunchScreenCapture() },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(stringResource(R.string.region_draw))
