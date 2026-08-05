@@ -45,6 +45,19 @@
     <string name="region_right">Right (%)</string>
     <string name="region_bottom">Bottom (%)</string>
     <string name="region_draw">Draw Region</string>
+    <string name="region_draw_cancel">Cancel</string>
+    <string name="region_draw_confirm">Confirm</string>
+    <string name="floating_service_started_toast">Floating window started, automatically switched to home screen.</string>
+    <string name="floating_service_capture_btn"> ✂️ Capture </string>
+    <string name="floating_service_toast_hint">Please tap the floating button ✂️ on target app</string>
+    <string name="region_pixel_range_fmt">X: %1$dpx ~ %2$dpx  |  Y: %3$dpx ~ %4$dpx</string>
+    <string name="region_pixel_size_fmt">Box Size: %1$dpx × %2$dpx (Screen: %3$d × %4$d)</string>
+    <string name="region_advanced_hide_px">Hide Advanced Pixel Settings ▲</string>
+    <string name="region_advanced_show_px">Advanced: Edit Pixel Coordinates (px) ▼</string>
+    <string name="region_left_px">Left (px)</string>
+    <string name="region_top_px">Top (px)</string>
+    <string name="region_right_px">Right (px)</string>
+    <string name="region_bottom_px">Bottom (px)</string>
     <string name="overlay_permission_needed">Overlay permission is needed for region selection.</string>
     
     <string name="var_full_text">%%ocr_full_text\nFull Text\nContains all text results combined</string>

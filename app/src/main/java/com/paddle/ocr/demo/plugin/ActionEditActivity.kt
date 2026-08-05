@@ -98,7 +98,7 @@ class ActionEditActivity : ComponentActivity() {
                 } else {
                     startService(serviceIntent)
                 }
-                Toast.makeText(this, "悬浮窗已启动，已自动为您切回桌面", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.floating_service_started_toast), Toast.LENGTH_LONG).show()
                 moveTaskToBack(true)
             }
         }
@@ -659,14 +659,14 @@ fun ActionEditScreen(
 
                             // Pixel Summary
                             Text(
-                                text = "X: ${leftPx}px ~ ${rightPx}px  |  Y: ${topPx}px ~ ${bottomPx}px",
+                                text = stringResource(R.string.region_pixel_range_fmt, leftPx, rightPx, topPx, bottomPx),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "选框尺寸: ${widthPx}px × ${heightPx}px (屏幕: ${screenW} × ${screenH})",
+                                text = stringResource(R.string.region_pixel_size_fmt, widthPx, heightPx, screenW, screenH),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
@@ -696,7 +696,7 @@ fun ActionEditScreen(
                             onClick = { showAdvancedInput = !showAdvancedInput },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
-                            Text(if (showAdvancedInput) "隐藏高级像素修改 ▲" else "高级：手动修改像素坐标 (px) ▼")
+                            Text(if (showAdvancedInput) stringResource(R.string.region_advanced_hide_px) else stringResource(R.string.region_advanced_show_px))
                         }
 
                         AnimatedVisibility(visible = showAdvancedInput) {
@@ -713,7 +713,7 @@ fun ActionEditScreen(
                                                 }
                                             }
                                         },
-                                        label = { Text("左边缘 (px)") },
+                                        label = { Text(stringResource(R.string.region_left_px)) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true
                                     )
@@ -727,7 +727,7 @@ fun ActionEditScreen(
                                                 }
                                             }
                                         },
-                                        label = { Text("上边缘 (px)") },
+                                        label = { Text(stringResource(R.string.region_top_px)) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true
                                     )
@@ -744,7 +744,7 @@ fun ActionEditScreen(
                                                 }
                                             }
                                         },
-                                        label = { Text("右边缘 (px)") },
+                                        label = { Text(stringResource(R.string.region_right_px)) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true
                                     )
@@ -758,7 +758,7 @@ fun ActionEditScreen(
                                                 }
                                             }
                                         },
-                                        label = { Text("下边缘 (px)") },
+                                        label = { Text(stringResource(R.string.region_bottom_px)) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true
                                     )

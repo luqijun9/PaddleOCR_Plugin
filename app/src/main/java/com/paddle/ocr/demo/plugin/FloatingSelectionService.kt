@@ -78,7 +78,7 @@ class FloatingSelectionService : Service() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         
         floatingView = Button(this).apply {
-            text = " ✂️ 截图 "
+            text = getString(com.paddle.ocr.demo.R.string.floating_service_capture_btn)
             textSize = 20f
             setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
             setTextColor(android.graphics.Color.WHITE)
@@ -104,7 +104,7 @@ class FloatingSelectionService : Service() {
 
         windowManager?.addView(floatingView, layoutParams)
         android.os.Handler(android.os.Looper.getMainLooper()).post {
-            android.widget.Toast.makeText(this, "请在目标界面点击悬浮按钮 ✂️", android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(this, getString(com.paddle.ocr.demo.R.string.floating_service_toast_hint), android.widget.Toast.LENGTH_LONG).show()
         }
     }
 

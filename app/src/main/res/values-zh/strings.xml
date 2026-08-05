@@ -45,6 +45,19 @@
     <string name="region_right">右 (%)</string>
     <string name="region_bottom">下 (%)</string>
     <string name="region_draw">框选范围</string>
+    <string name="region_draw_cancel">取消</string>
+    <string name="region_draw_confirm">确认</string>
+    <string name="floating_service_started_toast">悬浮窗已启动，已自动为您切回桌面</string>
+    <string name="floating_service_capture_btn"> ✂️ 截图 </string>
+    <string name="floating_service_toast_hint">请在目标界面点击悬浮按钮 ✂️</string>
+    <string name="region_pixel_range_fmt">X: %1$dpx ~ %2$dpx  |  Y: %3$dpx ~ %4$dpx</string>
+    <string name="region_pixel_size_fmt">选框尺寸: %1$dpx × %2$dpx (屏幕: %3$d × %4$d)</string>
+    <string name="region_advanced_hide_px">隐藏高级像素修改 ▲</string>
+    <string name="region_advanced_show_px">高级：手动修改像素坐标 (px) ▼</string>
+    <string name="region_left_px">左边缘 (px)</string>
+    <string name="region_top_px">上边缘 (px)</string>
+    <string name="region_right_px">右边缘 (px)</string>
+    <string name="region_bottom_px">下边缘 (px)</string>
     <string name="overlay_permission_needed">未授予悬浮窗权限，请在设置中开启</string>
     
     <string name="var_full_text">%%ocr_full_text\n全量文本\n包含所有拼在一起的文本结果</string>

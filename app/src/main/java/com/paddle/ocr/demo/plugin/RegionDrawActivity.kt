@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
@@ -24,7 +25,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.paddle.ocr.demo.R
 import kotlin.math.max
 import kotlin.math.min
 
@@ -74,7 +77,7 @@ class RegionDrawActivity : ComponentActivity() {
             val handleTouchRadiusPx = with(density) { 32.dp.toPx() }
             val minBoxSizePx = with(density) { 32.dp.toPx() }
 
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
@@ -269,7 +272,7 @@ class RegionDrawActivity : ComponentActivity() {
                         setResult(Activity.RESULT_CANCELED)
                         finish()
                     }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.region_draw_cancel))
                     }
                     Button(onClick = {
                         val rect = selectionRect
@@ -289,7 +292,7 @@ class RegionDrawActivity : ComponentActivity() {
                         }
                         finish()
                     }) {
-                        Text("Confirm")
+                        Text(stringResource(R.string.region_draw_confirm))
                     }
                 }
             }
