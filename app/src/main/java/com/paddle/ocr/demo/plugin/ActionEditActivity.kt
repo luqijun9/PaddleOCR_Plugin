@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.paddle.ocr.demo.R
 import android.app.Activity
 import android.content.Intent
@@ -95,29 +96,29 @@ class ActionEditActivity : ComponentActivity() {
 
         val blurb = buildString {
             when (captureMode) {
-                TaskerPluginConstants.MODE_MEDIA_PROJECTION -> append("录屏模式 ")
-                TaskerPluginConstants.MODE_ACCESSIBILITY -> append("无障碍模式 ")
+                TaskerPluginConstants.MODE_MEDIA_PROJECTION -> append(getString(R.string.blurb_mode_screen))
+                TaskerPluginConstants.MODE_ACCESSIBILITY -> append(getString(R.string.blurb_mode_acc))
                 TaskerPluginConstants.MODE_FILE_PATH -> {
                     if (filePath.isEmpty()) {
-                        append("无图片 ")
+                        append(getString(R.string.blurb_no_image))
                     } else {
                         val fileName = java.io.File(filePath).name
-                        if (fileName.isNotEmpty()) append("$fileName ") else append("无图片 ")
+                        if (fileName.isNotEmpty()) append("$fileName ") else append(getString(R.string.blurb_no_image))
                     }
                 }
             }
-            if (targetText.isEmpty()) append("无查找") else append("查找: $targetText")
+            if (targetText.isEmpty()) append(getString(R.string.blurb_no_search)) else append(getString(R.string.blurb_search) + targetText)
         }
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_STRING_BLURB, blurb)
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_BUNDLE, resultBundle)
 
         val variables = arrayOf(
-            "%ocr_full_text\n全量文本\n包含所有拼在一起的文本结果",
-            "%ocr_json\nJSON格式结果\n包含每个文本块坐标的JSON数组",
-            "%match_found\n是否找到目标文本\ntrue 或 false",
-            "%match_center_x\n目标X坐标\n匹配文本的中心点X轴坐标",
-            "%match_center_y\n目标Y坐标\n匹配文本的中心点Y轴坐标",
-            "%ocr_error\n错误信息\n运行出错时的提示（如无障碍未开启）"
+            getString(R.string.var_full_text),
+            getString(R.string.var_json),
+            getString(R.string.var_match_found),
+            getString(R.string.var_center_x),
+            getString(R.string.var_center_y),
+            getString(R.string.var_error)
         )
         TaskerPlugin.addRelevantVariableList(resultIntent, variables)
 
@@ -162,7 +163,7 @@ fun ActionEditScreen(
             if (realPath != null) {
                 filePath = realPath
             } else {
-                Toast.makeText(context, "无法获取文件的绝对路径，请手动输入", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.path_error), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -172,17 +173,17 @@ fun ActionEditScreen(
     ) { permissions ->
         val allGranted = permissions.entries.all { it.value }
         if (!allGranted) {
-            Toast.makeText(context, "未授予存储权限，Tasker 可能无法读取本地图片文件", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.permission_denied_storage), Toast.LENGTH_SHORT).show()
         }
         galleryLauncher.launch(arrayOf("image/*"))
     }
 
-    val modeOptions = listOf("录屏权限 (需要授权)", "无障碍服务 (需要授权)", "指定文件路径 (本地图片)")
+    val modeOptions = listOf(stringResource(R.string.mode_screen_record), stringResource(R.string.mode_accessibility), stringResource(R.string.mode_file_path))
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("配置 OCR 插件") },
+                title = { Text(stringResource(R.string.action_edit_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -201,7 +202,7 @@ fun ActionEditScreen(
                         .padding(16.dp)
                         .height(56.dp)
                 ) {
-                    Text("保存并返回 (Save & Exit)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.save_and_exit), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -221,7 +222,7 @@ fun ActionEditScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "图像获取方式",
+                        text = stringResource(R.string.image_source_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -238,7 +239,7 @@ fun ActionEditScreen(
                                         selected = (captureMode == index),
                                         onClick = {
                                             if (index == TaskerPluginConstants.MODE_ACCESSIBILITY && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-                                                Toast.makeText(context, "无障碍截图仅支持 Android 11+", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.accessibility_not_supported), Toast.LENGTH_SHORT).show()
                                             } else {
                                                 captureMode = index
                                             }
@@ -267,7 +268,7 @@ fun ActionEditScreen(
                             OutlinedTextField(
                                 value = filePath,
                                 onValueChange = { filePath = it },
-                                label = { Text("图片文件绝对路径") },
+                                label = { Text(stringResource(R.string.file_path_hint)) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true
                             )
@@ -294,7 +295,7 @@ fun ActionEditScreen(
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_folder_outline),
-                                    contentDescription = "选择文件"
+                                    contentDescription = stringResource(R.string.select_file_btn)
                                 )
                             }
                         }
@@ -309,7 +310,7 @@ fun ActionEditScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "查找目标文本 (可选)",
+                        text = stringResource(R.string.target_text_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -319,21 +320,21 @@ fun ActionEditScreen(
                     OutlinedTextField(
                         value = targetText,
                         onValueChange = { targetText = it },
-                        label = { Text("输入你想查找的文字") },
+                        label = { Text(stringResource(R.string.target_text_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "匹配范围",
+                        text = stringResource(R.string.match_scope),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val matchScopeOptions = listOf("包含", "完全匹配")
+                    val matchScopeOptions = listOf(stringResource(R.string.contains_match), stringResource(R.string.exact_match))
                     var selectedScopeIndex = if (isExactMatch) 1 else 0
 
                     Row(modifier = Modifier.fillMaxWidth()) {
@@ -367,7 +368,7 @@ fun ActionEditScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "匹配规则",
+                        text = stringResource(R.string.match_rule),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -391,7 +392,7 @@ fun ActionEditScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "使用正则表达式匹配",
+                            text = stringResource(R.string.regex_match),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -413,7 +414,7 @@ fun ActionEditScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = "不区分大小写",
+                            text = stringResource(R.string.ignore_case),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -423,14 +424,14 @@ fun ActionEditScreen(
             // 说明文字
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(
-                    text = "说明",
+                    text = stringResource(R.string.instruction_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "此插件将自动截取当前屏幕，并识别文字。如果找到了目标文本，会返回中心坐标。\n可以通过 Tasker 变量 %ocr_full_text, %match_found, %match_center_x, %match_center_y 获取结果。",
+                    text = context.getString(R.string.instruction_desc, "%ocr_full_text", "%match_found", "%match_center_x", "%match_center_y"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
@@ -439,7 +440,7 @@ fun ActionEditScreen(
                 
                 SelectionContainer {
                     Text(
-                        text = "💡 录屏模式免弹窗截图：\n如果您有 Root 或 Shizuku，可通过执行以下 ADB 命令隐式授予录屏权限，从此使用“录屏权限”模式不再有确认弹窗：\nappops set com.paddle.ocr.demo PROJECT_MEDIA allow",
+                        text = stringResource(R.string.appops_title),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )

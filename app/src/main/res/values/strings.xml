@@ -1,5 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PP-OCRv6 Demo</string>
-    <string name="accessibility_service_description">用于 Tasker 插件的静默屏幕截图和OCR识别。</string>
+    <string name="app_name">PaddleOCR</string>
+    <string name="app_name_plugin">OCR Screen Capture</string>
+    <string name="accessibility_service_description">This service is used for OCR plugin to silently capture screen without confirmation.</string>
+    
+    <!-- ActionEditActivity -->
+    <string name="permission_denied_storage">Storage permission not granted, Tasker may not be able to read local image files</string>
+    <string name="action_edit_title">Configure OCR Plugin</string>
+    <string name="save_and_exit">Save &amp; Exit</string>
+    <string name="image_source_title">Image Source</string>
+    <string name="mode_screen_record">Screen Record (Requires Auth)</string>
+    <string name="mode_accessibility">Accessibility (Requires Auth)</string>
+    <string name="mode_file_path">File Path (Local Image)</string>
+    <string name="accessibility_not_supported">Accessibility capture is only supported on Android 11+</string>
+    <string name="file_path_hint">Enter absolute path to image...</string>
+    <string name="select_file_btn">Select File</string>
+    <string name="path_error">Cannot get absolute path, please enter manually</string>
+    
+    <string name="target_text_title">Target Text (Optional)</string>
+    <string name="target_text_hint">Enter text to match</string>
+    <string name="match_scope">Match Scope</string>
+    <string name="match_rule">Match Rule</string>
+    <string name="contains_match">Contains</string>
+    <string name="regex_match">Use regular expression</string>
+    <string name="exact_match">Exact match</string>
+    <string name="ignore_case">Ignore case</string>
+    
+    <string name="instruction_title">Instructions</string>
+    <string name="instruction_desc">This plugin will automatically capture the screen and recognize text. If the target text is found, it will return the center coordinates.\nYou can get the results via Tasker variables %1$s, %2$s, %3$s, %4$s.</string>
+    <string name="appops_title">💡 Screen Record without confirmation:\nIf you have Root or Shizuku, you can run the following ADB command to silently grant screen recording permission:\nappops set com.paddle.ocr.demo PROJECT_MEDIA allow</string>
+    
+    <!-- Tasker Blurb -->
+    <string name="blurb_mode_screen">Screen Mode </string>
+    <string name="blurb_mode_acc">Accessibility Mode </string>
+    <string name="blurb_no_image">No Image </string>
+    <string name="blurb_no_search">No search</string>
+    <string name="blurb_search">Search: </string>
+    
+    <!-- Tasker Variables -->
+    <string name="var_full_text">%%ocr_full_text\nFull Text\nContains all text results combined</string>
+    <string name="var_json">%%ocr_json\nJSON Result\nJSON array containing coordinates for each text block</string>
+    <string name="var_match_found">%%match_found\nTarget Found\ntrue or false</string>
+    <string name="var_center_x">%%match_center_x\nTarget Center X\nX-axis coordinate of the matched text center</string>
+    <string name="var_center_y">%%match_center_y\nTarget Center Y\nY-axis coordinate of the matched text center</string>
+    <string name="var_error">%%ocr_error\nError Info\nError messages when execution fails</string>
+    
+    <!-- HomeActivity -->
+    <string name="home_subtitle">Powerful Automation OCR Plugin</string>
+    <string name="home_desc">Built for Tasker and other automation tools, supporting multi-mode silent recognition and extraction</string>
+    <string name="home_modes_title">Three Image Sources</string>
+    <string name="home_mode_1">1. Screen Record: Capture current screen via MediaProjection, recommended to configure silent auth.</string>
+    <string name="home_mode_2">2. Accessibility: Completely silent screen capture (Android 11+ only).</string>
+    <string name="home_mode_3">3. File Path: Directly recognize an image saved on local storage.</string>
+    <string name="home_adb_title">Silent Screen Record Auth (ADB)</string>
+    <string name="home_adb_desc">If you have Root access or use Shizuku/ADB, run the following command to grant silent auth:</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+    <string name="copy_btn">Copy</string>
+    <string name="test_engine_btn">Test OCR Engine (Old UI)</string>
+    
+    <!-- Services & Errors -->
+    <string name="error_capture_failed">Screen capture failed, no valid image data acquired</string>
+    <string name="error_ocr_uninitialized">OCR engine not initialized</string>
+    <string name="error_no_screen_record">Screen recording permission not granted</string>
+    <string name="error_file_read">Cannot read image file: %1$s</string>
+    <string name="notification_title">Tasker OCR</string>
+    <string name="notification_text">Capturing screen and recognizing text...</string>
 </resources>

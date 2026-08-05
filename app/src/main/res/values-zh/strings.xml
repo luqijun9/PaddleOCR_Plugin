@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PaddleOCR</string>
+    <string name="app_name_plugin">OCR屏幕识别</string>
+    <string name="accessibility_service_description">此服务用于 OCR 插件静默截屏识别，避免每次授权弹窗。</string>
+    
+    <!-- ActionEditActivity -->
+    <string name="permission_denied_storage">未授予存储权限，Tasker 可能无法读取本地图片文件</string>
+    <string name="action_edit_title">配置 OCR 插件</string>
+    <string name="save_and_exit">保存并返回 (Save &amp; Exit)</string>
+    <string name="image_source_title">图像获取方式</string>
+    <string name="mode_screen_record">录屏权限 (需要授权)</string>
+    <string name="mode_accessibility">无障碍服务 (需要授权)</string>
+    <string name="mode_file_path">指定文件路径 (本地图片)</string>
+    <string name="accessibility_not_supported">无障碍截图仅支持 Android 11+</string>
+    <string name="file_path_hint">请输入图片绝对路径...</string>
+    <string name="select_file_btn">选择文件</string>
+    <string name="path_error">无法获取文件的绝对路径，请手动输入</string>
+    
+    <string name="target_text_title">查找目标文本 (可选)</string>
+    <string name="target_text_hint">输入想要匹配的文字内容</string>
+    <string name="match_scope">匹配范围</string>
+    <string name="match_rule">匹配规则</string>
+    <string name="contains_match">包含</string>
+    <string name="regex_match">使用正则表达式匹配</string>
+    <string name="exact_match">完全匹配</string>
+    <string name="ignore_case">不区分大小写</string>
+    
+    <string name="instruction_title">说明</string>
+    <string name="instruction_desc">此插件将自动截取当前屏幕，并识别文字。如果找到了目标文本，会返回中心坐标。\n可以通过 Tasker 变量 %1$s, %2$s, %3$s, %4$s 获取结果。</string>
+    <string name="appops_title">💡 录屏模式免弹窗截图：\n如果您有 Root 或 Shizuku，可通过执行以下 ADB 命令隐式授予录屏权限，从此使用“录屏权限”模式不再有确认弹窗：\nappops set com.paddle.ocr.demo PROJECT_MEDIA allow</string>
+    
+    <!-- Tasker Blurb -->
+    <string name="blurb_mode_screen">录屏模式 </string>
+    <string name="blurb_mode_acc">无障碍模式 </string>
+    <string name="blurb_no_image">无图片 </string>
+    <string name="blurb_no_search">无查找</string>
+    <string name="blurb_search">查找: </string>
+    
+    <!-- Tasker Variables -->
+    <string name="var_full_text">%%ocr_full_text\n全量文本\n包含所有拼在一起的文本结果</string>
+    <string name="var_json">%%ocr_json\nJSON格式结果\n包含每个文本块坐标的JSON数组</string>
+    <string name="var_match_found">%%match_found\n是否找到目标文本\ntrue 或 false</string>
+    <string name="var_center_x">%%match_center_x\n目标X坐标\n匹配文本的中心点X轴坐标</string>
+    <string name="var_center_y">%%match_center_y\n目标Y坐标\n匹配文本的中心点Y轴坐标</string>
+    <string name="var_error">%%ocr_error\n错误信息\n运行出错时的提示（如无障碍未开启）</string>
+    
+    <!-- HomeActivity -->
+    <string name="home_subtitle">强大的自动化 OCR 插件</string>
+    <string name="home_desc">专为 Tasker 等自动化工具打造，支持多模式静默识别提取</string>
+    <string name="home_modes_title">三种图像获取方式</string>
+    <string name="home_mode_1">1. 录屏模式：通过 MediaProjection 获取当前屏幕画面，推荐配置免弹窗后使用。</string>
+    <string name="home_mode_2">2. 无障碍模式：完全静默获取屏幕内容 (仅限 Android 11+)。</string>
+    <string name="home_mode_3">3. 指定文件：直接识别存储卡中保存的图片。</string>
+    <string name="home_adb_title">录屏免弹窗授权 (ADB)</string>
+    <string name="home_adb_desc">如果您有 Root 权限或使用 Shizuku/ADB，可运行以下命令授予免确认权限：</string>
+    <string name="copied_to_clipboard">已复制到剪贴板</string>
+    <string name="copy_btn">复制</string>
+    <string name="test_engine_btn">测试 OCR 引擎 (旧主页)</string>
+    
+    <!-- Services & Errors -->
+    <string name="error_capture_failed">截屏失败，未获取到有效图像数据</string>
+    <string name="error_ocr_uninitialized">OCR引擎未初始化</string>
+    <string name="error_no_screen_record">未获得录屏权限</string>
+    <string name="error_file_read">无法读取图片文件: %1$s</string>
+    <string name="notification_title">Tasker OCR</string>
+    <string name="notification_text">正在截屏识别中...</string>
+</resources>

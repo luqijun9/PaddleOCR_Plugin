@@ -23,6 +23,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
 import com.paddle.ocr.demo.OCRApplication
+import com.paddle.ocr.demo.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,8 +50,8 @@ class ScreenCaptureService : Service() {
         log("=== onCreate ===")
         createNotificationChannel()
         val notification = Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("Tasker OCR")
-            .setContentText("正在截屏识别中...")
+            .setContentTitle(getString(R.string.notification_title))
+            .setContentText(getString(R.string.notification_text))
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .build()
         startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
@@ -90,7 +91,7 @@ class ScreenCaptureService : Service() {
             } else {
                 log("Failed to decode file: $filePath")
                 val varsBundle = Bundle().apply {
-                    putString("%ocr_error", "无法读取图片文件: $filePath")
+                    putString("%ocr_error", getString(R.string.error_file_read, filePath))
                 }
                 signalTaskerFinish(fireIntent, false, varsBundle)
                 stopSelf()
@@ -109,7 +110,7 @@ class ScreenCaptureService : Service() {
         } else {
             log("No MediaProjection token, cannot capture screen")
             val varsBundle = Bundle().apply {
-                putString("%ocr_error", "未获得录屏权限")
+                putString("%ocr_error", getString(R.string.error_no_screen_record))
             }
             signalTaskerFinish(fireIntent, false, varsBundle)
             stopSelf()
@@ -194,7 +195,7 @@ class ScreenCaptureService : Service() {
                 log("IMAGE IS NULL - screen capture failed!")
                 scope.launch {
                     val bundle = Bundle().apply {
-                        putString("%ocr_error", "截屏失败，未获取到有效图像数据")
+                        putString("%ocr_error", getString(R.string.error_capture_failed))
                     }
                     signalTaskerFinish(fireIntent, false, bundle)
                     stopSelf()
@@ -211,7 +212,7 @@ class ScreenCaptureService : Service() {
             log("OCR ENGINE IS NULL - not initialized!")
             if (!isAppTest) {
                 val bundle = Bundle().apply {
-                    putString("%ocr_error", "OCR引擎未初始化")
+                    putString("%ocr_error", getString(R.string.error_ocr_uninitialized))
                 }
                 signalTaskerFinish(fireIntent, false, bundle)
             }

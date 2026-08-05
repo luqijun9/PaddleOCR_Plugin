@@ -29,7 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import com.paddle.ocr.demo.MainActivity
+import com.paddle.ocr.demo.R
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +53,7 @@ fun HomeScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("OCR 屏幕识别", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.app_name_plugin), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -96,13 +98,13 @@ fun HomeScreen() {
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "强大的自动化 OCR 插件",
+                    text = stringResource(R.string.home_subtitle),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "专为 Tasker 等自动化工具打造，支持多模式静默识别提取",
+                    text = stringResource(R.string.home_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -120,14 +122,14 @@ fun HomeScreen() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("三种图像获取方式", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.home_modes_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("1. 录屏模式：通过 MediaProjection 获取当前屏幕画面，推荐配置免弹窗后使用。", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.home_mode_1), style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("2. 无障碍模式：完全静默获取屏幕内容 (仅限 Android 11+)。", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.home_mode_2), style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("3. 指定文件：直接识别存储卡中保存的图片。", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.home_mode_3), style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
@@ -141,11 +143,11 @@ fun HomeScreen() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("录屏免弹窗授权 (ADB)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Text(stringResource(R.string.home_adb_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "如果您有 Root 权限或使用 Shizuku/ADB，可运行以下命令授予免确认权限：",
+                        stringResource(R.string.home_adb_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                     )
@@ -173,10 +175,10 @@ fun HomeScreen() {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("ADB Command", adbCommand)
                                     clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
                                 }
                             ) {
-                                Text("复制", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(stringResource(R.string.copy_btn), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -200,7 +202,7 @@ fun HomeScreen() {
                     contentColor = MaterialTheme.colorScheme.onTertiary
                 )
             ) {
-                Text("测试 OCR 引擎 (旧主页)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.test_engine_btn), fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

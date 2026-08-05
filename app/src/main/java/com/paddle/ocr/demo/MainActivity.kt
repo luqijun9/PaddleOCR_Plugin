@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             val allGranted = permissions.entries.all { it.value }
             if (!allGranted) {
-                Toast.makeText(this, "未授予存储权限，Tasker 可能无法读取本地图片文件", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.permission_denied_storage), Toast.LENGTH_SHORT).show()
             }
         }
 
