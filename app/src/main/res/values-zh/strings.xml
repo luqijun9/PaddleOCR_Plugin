@@ -34,6 +34,7 @@
     <string name="blurb_mode_screen">"录屏模式 "</string>
     <string name="blurb_mode_acc">"无障碍模式 "</string>
     <string name="blurb_no_image">"无图片 "</string>
+    <string name="blurb_file_name">"%1$s "</string>
     <string name="blurb_no_search">"无查找"</string>
     <string name="blurb_search">"查找: "</string>
     

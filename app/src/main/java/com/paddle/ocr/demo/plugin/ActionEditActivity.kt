@@ -103,7 +103,7 @@ class ActionEditActivity : ComponentActivity() {
                         append(getString(R.string.blurb_no_image))
                     } else {
                         val fileName = java.io.File(filePath).name
-                        if (fileName.isNotEmpty()) append("$fileName ") else append(getString(R.string.blurb_no_image))
+                        if (fileName.isNotEmpty()) append(getString(R.string.blurb_file_name, fileName)) else append(getString(R.string.blurb_no_image))
                     }
                 }
             }
