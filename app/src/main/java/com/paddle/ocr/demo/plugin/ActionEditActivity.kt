@@ -13,7 +13,9 @@ import androidx.compose.ui.res.stringResource
 import com.paddle.ocr.demo.R
 import android.app.Activity
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.os.Build
+import android.provider.Settings
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -37,6 +39,15 @@ import androidx.compose.ui.unit.sp
 import com.paddle.ocr.demo.ui.theme.PPOCRTheme
 
 class ActionEditActivity : ComponentActivity() {
+    private var regionResultFlow = kotlinx.coroutines.flow.MutableStateFlow<FloatArray?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.getFloatArrayExtra("REGION_RESULT")?.let {
+            regionResultFlow.value = it
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -48,16 +59,27 @@ class ActionEditActivity : ComponentActivity() {
         var initialCaptureMode = TaskerPluginConstants.MODE_MEDIA_PROJECTION
         var initialFilePath = ""
 
+        var initialRestrictRegion = false
+        var initialRegionLeft = "0.0"
+        var initialRegionTop = "0.0"
+        var initialRegionRight = "1.0"
+        var initialRegionBottom = "1.0"
+
         if (intent.action == TaskerPluginConstants.ACTION_EDIT_SETTING) {
             val bundle = intent.getBundleExtra(TaskerPluginConstants.EXTRA_BUNDLE)
             if (bundle != null) {
                 initialTargetText = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, "")
                 initialIsRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
                 initialIsExactMatch = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, false)
-                // Default to true if the key is not in the bundle
                 initialIsIgnoreCase = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, true)
                 initialCaptureMode = bundle.getInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, TaskerPluginConstants.MODE_MEDIA_PROJECTION)
                 initialFilePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, "")
+                
+                initialRestrictRegion = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, false)
+                initialRegionLeft = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, "0.0")
+                initialRegionTop = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, "0.0")
+                initialRegionRight = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, "1.0")
+                initialRegionBottom = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, "1.0")
             }
         }
 
@@ -74,8 +96,14 @@ class ActionEditActivity : ComponentActivity() {
                         initialIsIgnoreCase = initialIsIgnoreCase,
                         initialCaptureMode = initialCaptureMode,
                         initialFilePath = initialFilePath,
-                        onSave = { mode, text, regex, exact, ignoreCase, path ->
-                            saveAndFinish(mode, text, regex, exact, ignoreCase, path)
+                        initialRestrictRegion = initialRestrictRegion,
+                        initialRegionLeft = initialRegionLeft,
+                        initialRegionTop = initialRegionTop,
+                        initialRegionRight = initialRegionRight,
+                        initialRegionBottom = initialRegionBottom,
+                        regionResultFlow = regionResultFlow,
+                        onSave = { mode, text, regex, exact, ignoreCase, path, restrict, left, top, right, bottom ->
+                            saveAndFinish(mode, text, regex, exact, ignoreCase, path, restrict, left, top, right, bottom)
                         }
                     )
                 }
@@ -83,7 +111,7 @@ class ActionEditActivity : ComponentActivity() {
         }
     }
 
-    private fun saveAndFinish(captureMode: Int, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, filePath: String) {
+    private fun saveAndFinish(captureMode: Int, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, filePath: String, restrictRegion: Boolean, regionLeft: String, regionTop: String, regionRight: String, regionBottom: String) {
         val resultIntent = Intent()
         val resultBundle = Bundle().apply {
             putString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, targetText)
@@ -92,6 +120,11 @@ class ActionEditActivity : ComponentActivity() {
             putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, isIgnoreCase)
             putInt(TaskerPluginConstants.BUNDLE_KEY_CAPTURE_MODE, captureMode)
             putString(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH, filePath)
+            putBoolean(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, restrictRegion)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, regionLeft)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, regionTop)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, regionRight)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, regionBottom)
         }
 
         val blurb = buildString {
@@ -108,6 +141,9 @@ class ActionEditActivity : ComponentActivity() {
                 }
             }
             if (targetText.isEmpty()) append(getString(R.string.blurb_no_search)) else append(getString(R.string.blurb_search) + targetText)
+            if (restrictRegion) {
+                append(" | Crop: $regionLeft, $regionTop, $regionRight, $regionBottom")
+            }
         }
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_STRING_BLURB, blurb)
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_BUNDLE, resultBundle)
@@ -126,7 +162,11 @@ class ActionEditActivity : ComponentActivity() {
             "net.dinglisch.android.tasker.extras.VARIABLE_REPLACE_KEYS",
             arrayOf(
                 TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT,
-                TaskerPluginConstants.BUNDLE_KEY_FILE_PATH
+                TaskerPluginConstants.BUNDLE_KEY_FILE_PATH,
+                TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT,
+                TaskerPluginConstants.BUNDLE_KEY_REGION_TOP,
+                TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT,
+                TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM
             )
         )
         TaskerPlugin.Setting.requestTimeoutMS(resultIntent, 120000)
@@ -145,7 +185,13 @@ fun ActionEditScreen(
     initialIsIgnoreCase: Boolean,
     initialCaptureMode: Int,
     initialFilePath: String,
-    onSave: (Int, String, Boolean, Boolean, Boolean, String) -> Unit
+    initialRestrictRegion: Boolean,
+    initialRegionLeft: String,
+    initialRegionTop: String,
+    initialRegionRight: String,
+    initialRegionBottom: String,
+    regionResultFlow: kotlinx.coroutines.flow.StateFlow<FloatArray?>,
+    onSave: (Int, String, Boolean, Boolean, Boolean, String, Boolean, String, String, String, String) -> Unit
 ) {
     val context = LocalContext.current
     var targetText by remember { mutableStateOf(initialTargetText) }
@@ -154,6 +200,22 @@ fun ActionEditScreen(
     var isIgnoreCase by remember { mutableStateOf(initialIsIgnoreCase) }
     var captureMode by remember { mutableStateOf(initialCaptureMode) }
     var filePath by remember { mutableStateOf(initialFilePath) }
+    
+    var restrictRegion by remember { mutableStateOf(initialRestrictRegion) }
+    var regionLeft by remember { mutableStateOf(initialRegionLeft) }
+    var regionTop by remember { mutableStateOf(initialRegionTop) }
+    var regionRight by remember { mutableStateOf(initialRegionRight) }
+    var regionBottom by remember { mutableStateOf(initialRegionBottom) }
+
+    val regionResult by regionResultFlow.collectAsState()
+    LaunchedEffect(regionResult) {
+        regionResult?.let {
+            regionLeft = String.format("%.2f", it[0])
+            regionTop = String.format("%.2f", it[1])
+            regionRight = String.format("%.2f", it[2])
+            regionBottom = String.format("%.2f", it[3])
+        }
+    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -180,6 +242,23 @@ fun ActionEditScreen(
 
     val modeOptions = listOf(stringResource(R.string.mode_screen_record), stringResource(R.string.mode_accessibility), stringResource(R.string.mode_file_path))
 
+    val screenCaptureLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val serviceIntent = Intent(context, FloatingSelectionService::class.java).apply {
+                putExtra("resultCode", result.resultCode)
+                putExtra("data", result.data)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            Toast.makeText(context, "悬浮窗已启动，请切换到目标应用进行框选", Toast.LENGTH_LONG).show()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -196,7 +275,7 @@ fun ActionEditScreen(
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Button(
-                    onClick = { onSave(captureMode, targetText, isRegex, isExactMatch, isIgnoreCase, filePath) },
+                    onClick = { onSave(captureMode, targetText, isRegex, isExactMatch, isIgnoreCase, filePath, restrictRegion, regionLeft, regionTop, regionRight, regionBottom) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
@@ -417,6 +496,92 @@ fun ActionEditScreen(
                             text = stringResource(R.string.ignore_case),
                             style = MaterialTheme.typography.bodyLarge
                         )
+                    }
+                }
+            }
+
+            // Region Restriction Configuration
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = restrictRegion,
+                                onClick = { restrictRegion = !restrictRegion },
+                                role = Role.Checkbox
+                            )
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = restrictRegion,
+                            onCheckedChange = null
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = stringResource(R.string.region_restrict),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (restrictRegion) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = regionLeft,
+                                onValueChange = { regionLeft = it },
+                                label = { Text(stringResource(R.string.region_left)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = regionTop,
+                                onValueChange = { regionTop = it },
+                                label = { Text(stringResource(R.string.region_top)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = regionRight,
+                                onValueChange = { regionRight = it },
+                                label = { Text(stringResource(R.string.region_right)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = regionBottom,
+                                onValueChange = { regionBottom = it },
+                                label = { Text(stringResource(R.string.region_bottom)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                if (Settings.canDrawOverlays(context)) {
+                                    val projectionManager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as android.media.projection.MediaProjectionManager
+                                    screenCaptureLauncher.launch(projectionManager.createScreenCaptureIntent())
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.overlay_permission_needed), Toast.LENGTH_SHORT).show()
+                                    try {
+                                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.region_draw))
+                        }
                     }
                 }
             }

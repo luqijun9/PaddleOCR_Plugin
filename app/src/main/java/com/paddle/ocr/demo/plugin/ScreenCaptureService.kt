@@ -75,6 +75,11 @@ class ScreenCaptureService : Service() {
         val isExactMatch = intent.getBooleanExtra("isExactMatch", false)
         val isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", true)
         val filePath = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_FILE_PATH)
+        val restrictRegion = intent.getBooleanExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, false)
+        val regionLeft = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT) ?: "0.0"
+        val regionTop = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP) ?: "0.0"
+        val regionRight = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT) ?: "1.0"
+        val regionBottom = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM) ?: "1.0"
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
         log("fireIntent action=${fireIntent?.action}")
@@ -85,7 +90,7 @@ class ScreenCaptureService : Service() {
             val bitmap = android.graphics.BitmapFactory.decodeFile(filePath)
             if (bitmap != null) {
                 CoroutineScope(Dispatchers.Default).launch {
-                    processOcr(bitmap, targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest)
+                    processOcr(bitmap, targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
                     stopSelf()
                 }
             } else {
@@ -106,7 +111,7 @@ class ScreenCaptureService : Service() {
             log("MediaProjection token received, starting capture")
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-            captureScreenAndOcr(targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest)
+            captureScreenAndOcr(targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
         } else {
             log("No MediaProjection token, cannot capture screen")
             val varsBundle = Bundle().apply {
@@ -120,7 +125,7 @@ class ScreenCaptureService : Service() {
     }
 
     @SuppressLint("WrongConstant")
-    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
+    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, fireIntent: Intent?, isAppTest: Boolean, restrictRegion: Boolean, regionLeft: String, regionTop: String, regionRight: String, regionBottom: String) {
         log("=== captureScreenAndOcr ===")
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
@@ -187,7 +192,7 @@ class ScreenCaptureService : Service() {
 
                 log("launching coroutine for OCR processing")
                 scope.launch {
-                    processOcr(croppedBitmap, targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest)
+                    processOcr(croppedBitmap, targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
                     log("OCR processing done, calling stopSelf")
                     stopSelf()
                 }
@@ -205,7 +210,7 @@ class ScreenCaptureService : Service() {
         log("onImageAvailable listener registered")
     }
 
-    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
+    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, fireIntent: Intent?, isAppTest: Boolean, restrictRegion: Boolean, regionLeft: String, regionTop: String, regionRight: String, regionBottom: String) {
         log("=== processOcr ===")
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
@@ -221,8 +226,42 @@ class ScreenCaptureService : Service() {
         log("OCR engine available")
 
         try {
+            // 裁剪逻辑
+            var finalBitmap = bitmap
+            var offsetX = 0
+            var offsetY = 0
+
+            if (restrictRegion) {
+                try {
+                    val leftPct = regionLeft.toFloat().coerceIn(0f, 1f)
+                    val topPct = regionTop.toFloat().coerceIn(0f, 1f)
+                    val rightPct = regionRight.toFloat().coerceIn(0f, 1f)
+                    val bottomPct = regionBottom.toFloat().coerceIn(0f, 1f)
+
+                    val bW = bitmap.width
+                    val bH = bitmap.height
+
+                    val cropLeft = (leftPct * bW).toInt().coerceIn(0, bW)
+                    val cropTop = (topPct * bH).toInt().coerceIn(0, bH)
+                    val cropRight = (rightPct * bW).toInt().coerceIn(0, bW)
+                    val cropBottom = (bottomPct * bH).toInt().coerceIn(0, bH)
+                    
+                    val cropWidth = cropRight - cropLeft
+                    val cropHeight = cropBottom - cropTop
+                    
+                    if (cropWidth > 0 && cropHeight > 0) {
+                        finalBitmap = Bitmap.createBitmap(bitmap, cropLeft, cropTop, cropWidth, cropHeight)
+                        offsetX = cropLeft
+                        offsetY = cropTop
+                        log("Cropped bitmap: ${cropWidth}x${cropHeight} at ($cropLeft, $cropTop)")
+                    }
+                } catch (e: Exception) {
+                    log("Failed to parse crop percentages: ${e.message}")
+                }
+            }
+
             log("calling ocrEngine.recognize()...")
-            val result = ocrEngine.recognize(bitmap)
+            val result = ocrEngine.recognize(finalBitmap)
             log("recognize() returned. results count: ${result.results.size}")
 
             if (result.results.isEmpty()) {
@@ -234,7 +273,9 @@ class ScreenCaptureService : Service() {
                 targetText = targetText,
                 isRegex = isRegex,
                 isExactMatch = isExactMatch,
-                isIgnoreCase = isIgnoreCase
+                isIgnoreCase = isIgnoreCase,
+                offsetX = offsetX,
+                offsetY = offsetY
             )
             log("varsBundle created with keys: ${bundle.keySet()}")
 

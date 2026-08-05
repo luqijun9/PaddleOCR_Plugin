@@ -20,6 +20,13 @@ object TaskerPluginConstants {
     const val BUNDLE_KEY_CAPTURE_MODE = "capture_mode"
     const val BUNDLE_KEY_FILE_PATH = "file_path"
     
+    // Region Restriction
+    const val BUNDLE_KEY_RESTRICT_REGION = "restrict_region"
+    const val BUNDLE_KEY_REGION_LEFT = "region_left"
+    const val BUNDLE_KEY_REGION_TOP = "region_top"
+    const val BUNDLE_KEY_REGION_RIGHT = "region_right"
+    const val BUNDLE_KEY_REGION_BOTTOM = "region_bottom"
+    
     // Capture Modes
     const val MODE_MEDIA_PROJECTION = 0
     const val MODE_ACCESSIBILITY = 1

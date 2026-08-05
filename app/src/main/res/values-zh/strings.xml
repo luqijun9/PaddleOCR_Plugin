@@ -38,7 +38,15 @@
     <string name="blurb_no_search">"无查找"</string>
     <string name="blurb_search">"查找: "</string>
     
-    <!-- Tasker Variables -->
+    <!-- Region Restriction -->
+    <string name="region_restrict">限制识别范围</string>
+    <string name="region_left">左 (%)</string>
+    <string name="region_top">上 (%)</string>
+    <string name="region_right">右 (%)</string>
+    <string name="region_bottom">下 (%)</string>
+    <string name="region_draw">框选范围</string>
+    <string name="overlay_permission_needed">未授予悬浮窗权限，请在设置中开启</string>
+    
     <string name="var_full_text">%%ocr_full_text\n全量文本\n包含所有拼在一起的文本结果</string>
     <string name="var_json">%%ocr_json\nJSON格式结果\n包含每个文本块坐标的JSON数组</string>
     <string name="var_match_found">%%match_found\n是否找到目标文本\ntrue 或 false</string>

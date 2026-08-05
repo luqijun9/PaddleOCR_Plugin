@@ -14,7 +14,9 @@ object OcrMatchUtils {
         targetText: String,
         isRegex: Boolean,
         isExactMatch: Boolean,
-        isIgnoreCase: Boolean
+        isIgnoreCase: Boolean,
+        offsetX: Int = 0,
+        offsetY: Int = 0
     ): Bundle {
         val fullTextBuilder = StringBuilder()
         val jsonArray = JSONArray()
@@ -32,13 +34,20 @@ object OcrMatchUtils {
             val tl = ocrResult.box.points[0]
             val br = ocrResult.box.points[2]
             
-            jsonObj.put("startX", tl.x.toInt())
-            jsonObj.put("startY", tl.y.toInt())
-            jsonObj.put("endX", br.x.toInt())
-            jsonObj.put("endY", br.y.toInt())
-            jsonObj.put("centerX", ((tl.x + br.x) / 2f).toInt())
-            jsonObj.put("centerY", ((tl.y + br.y) / 2f).toInt())
-            jsonObj.put("bounds", "(${tl.x.toInt()}, ${tl.y.toInt()}) - (${br.x.toInt()}, ${br.y.toInt()})")
+            val startX = tl.x.toInt() + offsetX
+            val startY = tl.y.toInt() + offsetY
+            val endX = br.x.toInt() + offsetX
+            val endY = br.y.toInt() + offsetY
+            val centerX = ((tl.x + br.x) / 2f).toInt() + offsetX
+            val centerY = ((tl.y + br.y) / 2f).toInt() + offsetY
+            
+            jsonObj.put("startX", startX)
+            jsonObj.put("startY", startY)
+            jsonObj.put("endX", endX)
+            jsonObj.put("endY", endY)
+            jsonObj.put("centerX", centerX)
+            jsonObj.put("centerY", centerY)
+            jsonObj.put("bounds", "($startX, $startY) - ($endX, $endY)")
             jsonArray.put(jsonObj)
 
             // Check for target text
@@ -59,11 +68,13 @@ object OcrMatchUtils {
                 if (isMatch) {
                     Log.d(TAG, "MATCH FOUND in result[$i]!")
                     matchFound = true
-                    val tl = ocrResult.box.points[0]
-                    val br = ocrResult.box.points[2]
-                    matchCenterX = ((tl.x + br.x) / 2f).toInt()
-                    matchCenterY = ((tl.y + br.y) / 2f).toInt()
-                    Log.d(TAG, "  centerX=$matchCenterX, centerY=$matchCenterY")
+                    val tlx = ocrResult.box.points[0].x.toInt()
+                    val tly = ocrResult.box.points[0].y.toInt()
+                    val brx = ocrResult.box.points[2].x.toInt()
+                    val bry = ocrResult.box.points[2].y.toInt()
+                    matchCenterX = ((tlx + brx) / 2) + offsetX
+                    matchCenterY = ((tly + bry) / 2) + offsetY
+                    Log.d(TAG, "  centerX=$matchCenterX, centerY=$matchCenterY (with offset: $offsetX, $offsetY)")
                 }
             }
         }

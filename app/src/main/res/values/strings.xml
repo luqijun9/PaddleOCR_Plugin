@@ -38,7 +38,15 @@
     <string name="blurb_no_search">"No search"</string>
     <string name="blurb_search">"Search: "</string>
     
-    <!-- Tasker Variables -->
+    <!-- Region Restriction -->
+    <string name="region_restrict">Restrict Recognition Area</string>
+    <string name="region_left">Left (%)</string>
+    <string name="region_top">Top (%)</string>
+    <string name="region_right">Right (%)</string>
+    <string name="region_bottom">Bottom (%)</string>
+    <string name="region_draw">Draw Region</string>
+    <string name="overlay_permission_needed">Overlay permission is needed for region selection.</string>
+    
     <string name="var_full_text">%%ocr_full_text\nFull Text\nContains all text results combined</string>
     <string name="var_json">%%ocr_json\nJSON Result\nJSON array containing coordinates for each text block</string>
     <string name="var_match_found">%%match_found\nTarget Found\ntrue or false</string>
