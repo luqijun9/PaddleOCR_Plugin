@@ -106,7 +106,7 @@ class OcrActionReceiver : BroadcastReceiver() {
                 else -> {
                     // Default Mode: MediaProjection
                     val activityIntent = Intent(context, ScreenCaptureActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         putExtra("fireIntent", intent)
                         putExtra("targetText", targetText)
                         putExtra("isRegex", isRegex)
