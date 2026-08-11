@@ -87,7 +87,3 @@ secrets.properties
 
 # Kotlin
 .kotlin/
-
-# Model
-*.onnx
-*.yml

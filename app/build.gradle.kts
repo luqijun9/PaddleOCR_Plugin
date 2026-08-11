@@ -8,6 +8,19 @@ android {
     namespace = "com.paddle.ocr.demo"
     compileSdk = 35
 
+    flavorDimensions += "model"
+    productFlavors {
+        create("v5mobile") {
+            dimension = "model"
+        }
+        create("v6small") {
+            dimension = "model"
+        }
+        create("v6tiny") {
+            dimension = "model"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.paddle.ocr.demo"
         minSdk = 26
@@ -16,9 +29,28 @@ android {
         versionName = "1.0.0"
     }
 
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("key.keystore")
+            storePassword = "102988"
+            keyAlias = "key0"
+            keyPassword = "102988"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

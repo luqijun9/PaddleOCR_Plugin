@@ -1,0 +1,53 @@
+name: Build APK on Push
+
+on:
+  push:
+    branches: [ "dev" ]
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'Product flavor to build (v5mobile, v6small, v6tiny, or all)'
+        required: false
+        default: 'all'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle with Cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Build arm64-v8a Release APK (all flavors)
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.flavor == 'all' }}
+        run: ./gradlew assembleRelease -Pandroid.injected.build.abi=arm64-v8a
+
+      - name: Build arm64-v8a Release APK (v5mobile only)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor == 'v5mobile' }}
+        run: ./gradlew assembleV5mobileRelease -Pandroid.injected.build.abi=arm64-v8a
+
+      - name: Build arm64-v8a Release APK (v6small only)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor == 'v6small' }}
+        run: ./gradlew assembleV6smallRelease -Pandroid.injected.build.abi=arm64-v8a
+
+      - name: Build arm64-v8a Release APK (v6tiny only)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor == 'v6tiny' }}
+        run: ./gradlew assembleV6tinyRelease -Pandroid.injected.build.abi=arm64-v8a
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paddleocr-apk-arm64-v8a
+          path: app/build/outputs/apk/**/*.apk

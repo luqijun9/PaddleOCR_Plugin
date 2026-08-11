@@ -1,0 +1,48 @@
+name: Build and Release APKs
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Version tag for release (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build Release APKs
+        run: ./gradlew assembleRelease
+
+      - name: Create Release in Public Repo
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repo: 'PaddleOCR_Plugin'
+          artifacts: "app/build/outputs/apk/*/*/*.apk"
+          tag: ${{ inputs.tag_name || github.ref_name }}
+          name: "Release ${{ inputs.tag_name || github.ref_name }}"
+          body: "Automatic build artifacts for PaddleOCR Tasker Plugin."
+          draft: false
+          prerelease: false

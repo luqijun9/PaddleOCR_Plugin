@@ -7,6 +7,19 @@ android {
     namespace = "com.paddle.ocr"
     compileSdk = 35
 
+    flavorDimensions += "model"
+    productFlavors {
+        create("v5mobile") {
+            dimension = "model"
+        }
+        create("v6small") {
+            dimension = "model"
+        }
+        create("v6tiny") {
+            dimension = "model"
+        }
+    }
+
     defaultConfig {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
