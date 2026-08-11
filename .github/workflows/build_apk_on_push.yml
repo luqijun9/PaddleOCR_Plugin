@@ -25,11 +25,11 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Build v6small arm64-v8a Release APK
-        run: ./gradlew assembleV6smallRelease
+      - name: Build v6small arm64-v8a Debug APK
+        run: ./gradlew assembleV6smallDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: paddleocr-v6small-arm64-v8a
-          path: app/build/outputs/apk/v6small/release/*.apk
+          name: paddleocr-v6small-arm64-v8a-debug
+          path: app/build/outputs/apk/v6small/debug/*.apk
