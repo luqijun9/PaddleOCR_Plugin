@@ -54,7 +54,9 @@
             android:name=".plugin.ScreenCaptureActivity"
             android:theme="@style/Theme.Transparent"
             android:excludeFromRecents="true"
-            android:exported="false" />
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=".plugin.ScreenCaptureTask" />
 
         <service
             android:name=".plugin.ScreenCaptureService"
