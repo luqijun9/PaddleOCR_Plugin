@@ -1,6 +1,7 @@
 package com.paddle.ocr.demo.plugin
 
 import android.app.Activity
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
@@ -20,7 +21,7 @@ class ScreenCaptureActivity : Activity() {
     private var isRegex: Boolean = false
     private var isExactMatch: Boolean = false
     private var isIgnoreCase: Boolean = true
-    private var fireIntent: Intent? = null
+    private var pendingIntent: PendingIntent? = null
     private var isAppTest: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,22 +36,10 @@ class ScreenCaptureActivity : Activity() {
         isRegex = intent.getBooleanExtra("isRegex", false)
         isExactMatch = intent.getBooleanExtra("isExactMatch", false)
         isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", true)
-        fireIntent = intent.getParcelableExtra("fireIntent")
+        pendingIntent = intent.getParcelableExtra(TaskerPluginConstants.EXTRA_PENDING_INTENT)
         isAppTest = intent.getBooleanExtra("isAppTest", false)
         log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, isAppTest=$isAppTest")
-
-        // 检查 fireIntent 是否完整
-        if (fireIntent != null) {
-            log("fireIntent action=${fireIntent!!.action}")
-            log("fireIntent extras=${fireIntent!!.extras?.keySet()}")
-            val completionStr = fireIntent!!.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
-            log("fireIntent hasCompletionIntent=${completionStr != null}")
-            if (completionStr != null) {
-                log("fireIntent completionIntentStr=$completionStr")
-            }
-        } else {
-            log("fireIntent is NULL!")
-        }
+        log("pendingIntent=${pendingIntent != null}")
 
         // 请求 MediaProjection 权限
         log("requesting MediaProjection permission...")
@@ -78,7 +67,7 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("isRegex", isRegex)
                     putExtra("isExactMatch", isExactMatch)
                     putExtra("isIgnoreCase", isIgnoreCase)
-                    putExtra("fireIntent", fireIntent)
+                    putExtra(TaskerPluginConstants.EXTRA_PENDING_INTENT, pendingIntent)
                     putExtra("isAppTest", isAppTest)
                     putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, intent.getBooleanExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, false))
                     putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT) ?: "0.0")
@@ -111,15 +100,24 @@ class ScreenCaptureActivity : Activity() {
 
     private fun signalTaskerFinish(success: Boolean) {
         log("=== signalTaskerFinish (Activity) ===")
-        if (fireIntent == null) {
-            log("fireIntent is null, cannot signal!")
+        if (pendingIntent == null) {
+            log("pendingIntent is null, cannot signal!")
             return
         }
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
-        log("calling signalFinish with resultCode=$resultCode")
-        val signaled = TaskerPlugin.Setting.signalFinish(this, fireIntent!!, resultCode, Bundle())
-        log("signalFinish returned: signaled=$signaled")
+        log("calling pendingIntent.send() with resultCode=$resultCode")
+
+        val resultIntent = Intent(this, PluginResultsService::class.java).apply {
+            putExtra(PluginResultsService.EXTRA_PLUGIN_RESULT_BUNDLE, Bundle())
+            putExtra(PluginResultsService.EXTRA_PLUGIN_RESULT_CODE, resultCode)
+        }
+        try {
+            pendingIntent!!.send(this, 0, resultIntent)
+            log("pendingIntent.send() completed")
+        } catch (e: PendingIntent.CanceledException) {
+            log("PendingIntent.send() failed: ${e.message}")
+        }
     }
 
     private fun log(msg: String) {

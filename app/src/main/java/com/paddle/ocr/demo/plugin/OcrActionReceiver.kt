@@ -1,15 +1,21 @@
 package com.paddle.ocr.demo.plugin
 
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
+import java.util.concurrent.atomic.AtomicInteger
 
 class OcrActionReceiver : BroadcastReceiver() {
     companion object {
         const val TAG = "OcrPlugin"
         const val SUB_TAG = "Receiver"
         const val RESULT_CODE_PENDING = android.app.Activity.RESULT_FIRST_USER + 2
+
+        /** 用于生成唯一 PendingIntent requestCode 的原子计数器 */
+        private val nextRequestCode = AtomicInteger(10000)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -63,13 +69,37 @@ class OcrActionReceiver : BroadcastReceiver() {
                 resultCode = TaskerPlugin.Setting.RESULT_CODE_PENDING
             }
 
+            // ============================================================
+            // 引用传递（Reference-passing）模式：
+            // 不再将 fireIntent 通过 putExtra 序列化传递给下游组件，
+            // 而是将 fireIntent 保管在 PluginResultsService 的 Intent 中，
+            // 用 PendingIntent 封装后放入下游 Intent 的 EXTRA_PENDING_INTENT 键。
+            //
+            // 下游组件处理完毕后，通过该 PendingIntent 将结果发回
+            // PluginResultsService，由它提取原始 fireIntent 调用 signalFinish。
+            // ============================================================
+            val pendingIntentFlags = PendingIntent.FLAG_ONE_SHOT or
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        PendingIntent.FLAG_MUTABLE
+                    } else {
+                        0
+                    }
+
             when (captureMode) {
                 TaskerPluginConstants.MODE_ACCESSIBILITY -> {
+                    // Accessibility 模式：fireIntent → PendingIntent → 传给 Service 方法参数
+                    val resultsIntent = Intent(context, PluginResultsService::class.java)
+                    resultsIntent.putExtra(PluginResultsService.EXTRA_ORIGINAL_INTENT, intent)
+                    val pendingIntent = PendingIntent.getService(
+                        context, nextRequestCode.incrementAndGet(),
+                        resultsIntent, pendingIntentFlags
+                    )
+
                     val accService = OcrAccessibilityService.instance
                     if (accService != null) {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
                             accService.captureAndRecognize(
-                                intent, targetText, isRegex, isExactMatch, isIgnoreCase,
+                                pendingIntent, targetText, isRegex, isExactMatch, isIgnoreCase,
                                 restrictRegion, regionLeft, regionTop, regionRight, regionBottom
                             )
                         } else {
@@ -80,12 +110,21 @@ class OcrActionReceiver : BroadcastReceiver() {
                     }
                 }
                 TaskerPluginConstants.MODE_FILE_PATH -> {
+                    // File Path 模式：fireIntent → PendingIntent → 放入 Service Intent
                     if (filePath.isEmpty()) {
                         signalError(context, intent, "文件路径为空")
                         return
                     }
+
+                    val resultsIntent = Intent(context, PluginResultsService::class.java)
+                    resultsIntent.putExtra(PluginResultsService.EXTRA_ORIGINAL_INTENT, intent)
+                    val pendingIntent = PendingIntent.getService(
+                        context, nextRequestCode.incrementAndGet(),
+                        resultsIntent, pendingIntentFlags
+                    )
+
                     val serviceIntent = Intent(context, ScreenCaptureService::class.java).apply {
-                        putExtra("fireIntent", intent)
+                        putExtra(TaskerPluginConstants.EXTRA_PENDING_INTENT, pendingIntent)
                         putExtra("targetText", targetText)
                         putExtra("isRegex", isRegex)
                         putExtra("isExactMatch", isExactMatch)
@@ -105,9 +144,17 @@ class OcrActionReceiver : BroadcastReceiver() {
                 }
                 else -> {
                     // Default Mode: MediaProjection
+                    // fireIntent → PendingIntent → 放入 Activity Intent
+                    val resultsIntent = Intent(context, PluginResultsService::class.java)
+                    resultsIntent.putExtra(PluginResultsService.EXTRA_ORIGINAL_INTENT, intent)
+                    val pendingIntent = PendingIntent.getService(
+                        context, nextRequestCode.incrementAndGet(),
+                        resultsIntent, pendingIntentFlags
+                    )
+
                     val activityIntent = Intent(context, ScreenCaptureActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        putExtra("fireIntent", intent)
+                        putExtra(TaskerPluginConstants.EXTRA_PENDING_INTENT, pendingIntent)
                         putExtra("targetText", targetText)
                         putExtra("isRegex", isRegex)
                         putExtra("isExactMatch", isExactMatch)

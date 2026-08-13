@@ -12,6 +12,12 @@ object TaskerPluginConstants {
     // Tasker completion intent (private in TaskerPlugin.java, needed for debug logging)
     const val EXTRA_PLUGIN_COMPLETION_INTENT = "net.dinglisch.android.tasker.extras.COMPLETION_INTENT"
 
+    // ============================================================
+    // Reference-passing pattern extras (Termux:Tasker compatible)
+    // ============================================================
+    /** PendingIntent extra key, placed into downstream intent */
+    const val EXTRA_PENDING_INTENT = "pendingIntent"
+
     // Our custom bundle keys
     const val BUNDLE_KEY_TARGET_TEXT = "target_text"
     const val BUNDLE_KEY_IS_REGEX = "is_regex"

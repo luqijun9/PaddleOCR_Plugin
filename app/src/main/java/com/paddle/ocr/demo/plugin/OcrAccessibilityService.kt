@@ -2,6 +2,7 @@ package com.paddle.ocr.demo.plugin
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
@@ -58,7 +59,7 @@ class OcrAccessibilityService : AccessibilityService() {
 
     @RequiresApi(Build.VERSION_CODES.R)
     fun captureAndRecognize(
-        fireIntent: Intent,
+        pendingIntent: PendingIntent,
         targetText: String,
         isRegex: Boolean,
         isExactMatch: Boolean,
@@ -83,25 +84,25 @@ class OcrAccessibilityService : AccessibilityService() {
                     val softwareBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
                     hardwareBuffer.close()
                     performOcr(
-                        softwareBitmap, fireIntent, targetText, isRegex, isExactMatch, isIgnoreCase,
+                        softwareBitmap, pendingIntent, targetText, isRegex, isExactMatch, isIgnoreCase,
                         restrictRegion, regionLeft, regionTop, regionRight, regionBottom
                     )
                 } else {
                     hardwareBuffer.close()
-                    signalError(fireIntent, "无法从 HardwareBuffer 转换 Bitmap")
+                    signalError(pendingIntent, "无法从 HardwareBuffer 转换 Bitmap")
                 }
             }
 
             override fun onFailure(errorCode: Int) {
                 Log.d(TAG, "OcrAccessibilityService Screenshot onFailure: $errorCode")
-                signalError(fireIntent, "截屏失败，错误码：$errorCode")
+                signalError(pendingIntent, "截屏失败，错误码：$errorCode")
             }
         })
     }
 
     private fun performOcr(
         bitmap: Bitmap,
-        fireIntent: Intent,
+        pendingIntent: PendingIntent,
         targetText: String,
         isRegex: Boolean,
         isExactMatch: Boolean,
@@ -116,7 +117,7 @@ class OcrAccessibilityService : AccessibilityService() {
             try {
                 val ocrEngine = OCRApplication.instance.ocr
                 if (ocrEngine == null) {
-                    signalError(fireIntent, "OCR引擎未初始化")
+                    signalError(pendingIntent, "OCR引擎未初始化")
                     bitmap.recycle()
                     return@launch
                 }
@@ -142,18 +143,25 @@ class OcrAccessibilityService : AccessibilityService() {
                 )
 
                 Handler(Looper.getMainLooper()).post {
-                    Log.d(TAG, "OcrAccessibilityService OCR Complete, signaling Tasker")
-                    val resultCode = TaskerPlugin.Setting.RESULT_CODE_OK
-                    TaskerPlugin.Setting.signalFinish(this@OcrAccessibilityService, fireIntent, resultCode, varsBundle)
+                    Log.d(TAG, "OcrAccessibilityService OCR Complete, signaling Tasker via PendingIntent")
+                    val resultIntent = Intent(this@OcrAccessibilityService, PluginResultsService::class.java).apply {
+                        putExtra(PluginResultsService.EXTRA_PLUGIN_RESULT_BUNDLE, varsBundle)
+                        putExtra(PluginResultsService.EXTRA_PLUGIN_RESULT_CODE, TaskerPlugin.Setting.RESULT_CODE_OK)
+                    }
+                    try {
+                        pendingIntent.send(this@OcrAccessibilityService, 0, resultIntent)
+                    } catch (e: PendingIntent.CanceledException) {
+                        Log.e(TAG, "PendingIntent was cancelled: ${e.message}")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "OcrAccessibilityService OCR Error: ${e.message}", e)
-                signalError(fireIntent, "OCR 识别出错: ${e.message}")
+                signalError(pendingIntent, "OCR 识别出错: ${e.message}")
             }
         }
     }
 
-    fun signalError(fireIntent: Intent, errorMessage: String) {
+    fun signalError(pendingIntent: PendingIntent, errorMessage: String) {
         Handler(Looper.getMainLooper()).post {
             val varsBundle = Bundle().apply {
                 putString("%ocr_error", errorMessage)
@@ -163,7 +171,15 @@ class OcrAccessibilityService : AccessibilityService() {
                 putString("%match_center_x", "")
                 putString("%match_center_y", "")
             }
-            TaskerPlugin.Setting.signalFinish(this, fireIntent, TaskerPlugin.Setting.RESULT_CODE_FAILED, varsBundle)
+            val resultIntent = Intent(this, PluginResultsService::class.java).apply {
+                putExtra(PluginResultsService.EXTRA_PLUGIN_RESULT_BUNDLE, varsBundle)
+                putExtra(PluginResultsService.EXTRA_PLUGIN_RESULT_CODE, TaskerPlugin.Setting.RESULT_CODE_FAILED)
+            }
+            try {
+                pendingIntent.send(this, 0, resultIntent)
+            } catch (e: PendingIntent.CanceledException) {
+                Log.e(TAG, "PendingIntent was cancelled: ${e.message}")
+            }
         }
     }
 }

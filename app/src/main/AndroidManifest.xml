@@ -72,6 +72,10 @@
             android:exported="false" />
 
         <service
+            android:name=".plugin.PluginResultsService"
+            android:exported="false" />
+
+        <service
             android:name=".plugin.OcrAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">

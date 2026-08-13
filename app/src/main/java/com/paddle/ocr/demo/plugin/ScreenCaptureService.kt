@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -69,7 +70,7 @@ class ScreenCaptureService : Service() {
             return START_NOT_STICKY
         }
 
-        val fireIntent: Intent? = intent.getParcelableExtra("fireIntent")
+        val pendingIntent: PendingIntent? = intent.getParcelableExtra(TaskerPluginConstants.EXTRA_PENDING_INTENT)
         val targetText = intent.getStringExtra("targetText") ?: ""
         val isRegex = intent.getBooleanExtra("isRegex", false)
         val isExactMatch = intent.getBooleanExtra("isExactMatch", false)
@@ -82,7 +83,7 @@ class ScreenCaptureService : Service() {
         val regionBottom = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM) ?: "1.0"
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
-        log("fireIntent action=${fireIntent?.action}")
+        log("pendingIntent=${pendingIntent != null}")
         log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, filePath=$filePath")
 
         if (!filePath.isNullOrEmpty()) {
@@ -90,7 +91,7 @@ class ScreenCaptureService : Service() {
             val bitmap = android.graphics.BitmapFactory.decodeFile(filePath)
             if (bitmap != null) {
                 CoroutineScope(Dispatchers.Default).launch {
-                    processOcr(bitmap, targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
+                    processOcr(bitmap, targetText, isRegex, isExactMatch, isIgnoreCase, pendingIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
                     stopSelf()
                 }
             } else {
@@ -98,7 +99,7 @@ class ScreenCaptureService : Service() {
                 val varsBundle = Bundle().apply {
                     putString("%ocr_error", getString(R.string.error_file_read, filePath))
                 }
-                signalTaskerFinish(fireIntent, false, varsBundle)
+                signalTaskerFinish(pendingIntent, false, varsBundle)
                 stopSelf()
             }
             return START_NOT_STICKY
@@ -111,13 +112,13 @@ class ScreenCaptureService : Service() {
             log("MediaProjection token received, starting capture")
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-            captureScreenAndOcr(targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
+            captureScreenAndOcr(targetText, isRegex, isExactMatch, isIgnoreCase, pendingIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
         } else {
             log("No MediaProjection token, cannot capture screen")
             val varsBundle = Bundle().apply {
                 putString("%ocr_error", getString(R.string.error_no_screen_record))
             }
-            signalTaskerFinish(fireIntent, false, varsBundle)
+            signalTaskerFinish(pendingIntent, false, varsBundle)
             stopSelf()
         }
 
@@ -125,7 +126,7 @@ class ScreenCaptureService : Service() {
     }
 
     @SuppressLint("WrongConstant")
-    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, fireIntent: Intent?, isAppTest: Boolean, restrictRegion: Boolean, regionLeft: String, regionTop: String, regionRight: String, regionBottom: String) {
+    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, pendingIntent: PendingIntent?, isAppTest: Boolean, restrictRegion: Boolean, regionLeft: String, regionTop: String, regionRight: String, regionBottom: String) {
         log("=== captureScreenAndOcr ===")
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
@@ -192,7 +193,7 @@ class ScreenCaptureService : Service() {
 
                 log("launching coroutine for OCR processing")
                 scope.launch {
-                    processOcr(croppedBitmap, targetText, isRegex, isExactMatch, isIgnoreCase, fireIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
+                    processOcr(croppedBitmap, targetText, isRegex, isExactMatch, isIgnoreCase, pendingIntent, isAppTest, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
                     log("OCR processing done, calling stopSelf")
                     stopSelf()
                 }
@@ -202,7 +203,7 @@ class ScreenCaptureService : Service() {
                     val bundle = Bundle().apply {
                         putString("%ocr_error", getString(R.string.error_capture_failed))
                     }
-                    signalTaskerFinish(fireIntent, false, bundle)
+                    signalTaskerFinish(pendingIntent, false, bundle)
                     stopSelf()
                 }
             }
@@ -210,7 +211,7 @@ class ScreenCaptureService : Service() {
         log("onImageAvailable listener registered")
     }
 
-    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, fireIntent: Intent?, isAppTest: Boolean, restrictRegion: Boolean, regionLeft: String, regionTop: String, regionRight: String, regionBottom: String) {
+    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, isExactMatch: Boolean, isIgnoreCase: Boolean, pendingIntent: PendingIntent?, isAppTest: Boolean, restrictRegion: Boolean, regionLeft: String, regionTop: String, regionRight: String, regionBottom: String) {
         log("=== processOcr ===")
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
@@ -219,7 +220,7 @@ class ScreenCaptureService : Service() {
                 val bundle = Bundle().apply {
                     putString("%ocr_error", getString(R.string.error_ocr_uninitialized))
                 }
-                signalTaskerFinish(fireIntent, false, bundle)
+                callTaskerFinishIfNeeded(pendingIntent, false, bundle)
             }
             return
         }
@@ -264,7 +265,7 @@ class ScreenCaptureService : Service() {
                 OCRApplication.instance.appTestResult.emit(Pair(bitmap, result))
             } else {
                 log("calling signalTaskerFinish with success=true")
-                signalTaskerFinish(fireIntent, true, bundle)
+                signalTaskerFinish(pendingIntent, true, bundle)
             }
 
         } catch (e: Exception) {
@@ -274,17 +275,17 @@ class ScreenCaptureService : Service() {
                 val bundle = Bundle().apply {
                     putString("%ocr_error", "OCR 识别出错: ${e.message}")
                 }
-                signalTaskerFinish(fireIntent, false, bundle)
+                signalTaskerFinish(pendingIntent, false, bundle)
             }
         }
     }
 
-    private fun signalTaskerFinish(fireIntent: Intent?, success: Boolean, varsBundle: Bundle) {
+    private fun signalTaskerFinish(pendingIntent: PendingIntent?, success: Boolean, varsBundle: Bundle) {
         log("=== signalTaskerFinish ===")
         log("success=$success, varsBundleKeys=${varsBundle.keySet()}")
         
-        if (fireIntent == null) {
-            log("fireIntent is null, CANNOT signal Tasker!")
+        if (pendingIntent == null) {
+            log("pendingIntent is null, CANNOT signal Tasker!")
             return
         }
 
@@ -301,8 +302,16 @@ class ScreenCaptureService : Service() {
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
         
-        val signaled = TaskerPlugin.Setting.signalFinish(this, fireIntent, resultCode, varsBundle)
-        log("signalFinish signaled=$signaled")
+        val resultIntent = Intent(this, PluginResultsService::class.java).apply {
+            putExtra(PluginResultsService.EXTRA_PLUGIN_RESULT_BUNDLE, varsBundle)
+            putExtra(PluginResultsService.EXTRA_PLUGIN_RESULT_CODE, resultCode)
+        }
+        try {
+            pendingIntent.send(this, 0, resultIntent)
+            log("pendingIntent.send() completed")
+        } catch (e: PendingIntent.CanceledException) {
+            log("PendingIntent.send() failed: ${e.message}")
+        }
 
         Handler(Looper.getMainLooper()).post {
             if (success) {
@@ -310,6 +319,22 @@ class ScreenCaptureService : Service() {
             } else {
                 Toast.makeText(this, "OCR失败或未匹配", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    /**
+     * 统一处理正常完成和异常场景下的回传：
+     * - pendingIntent 存在时发送结果并通过 Handler post 停止服务
+     * - pendingIntent 不存在时仅 log 警告
+     */
+    private fun callTaskerFinishIfNeeded(pendingIntent: PendingIntent?, success: Boolean, varsBundle: Bundle) {
+        if (pendingIntent != null) {
+            signalTaskerFinish(pendingIntent, success, varsBundle)
+            Handler(Looper.getMainLooper()).post {
+                stopSelf()
+            }
+        } else {
+            log("pendingIntent is null, callTaskerFinishIfNeeded skipped")
         }
     }
 
