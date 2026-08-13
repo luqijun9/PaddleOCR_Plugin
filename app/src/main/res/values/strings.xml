@@ -87,4 +87,10 @@
     <string name="error_file_read">Cannot read image file: %1$s</string>
     <string name="notification_title">Tasker OCR</string>
     <string name="notification_text">Capturing screen and recognizing text...</string>
+    
+    <!-- Keep Alive Service -->
+    <string name="app_keep_alive_notification_title">OCR Service Running</string>
+    <string name="app_keep_alive_notification_text">Keeping app alive in background</string>
+    <string name="app_keep_alive_channel_name">Keep Alive Service</string>
+    <string name="app_keep_alive_channel_desc">Maintains the app process when the app is open</string>
 </resources>

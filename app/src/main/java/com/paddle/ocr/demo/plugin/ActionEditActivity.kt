@@ -5,9 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.MediaStore
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.paddle.ocr.demo.R
@@ -15,12 +12,15 @@ import android.app.Activity
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Build
-import android.provider.Settings
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,6 +53,10 @@ class ActionEditActivity : ComponentActivity() {
     private var pendingRegionRight = "1.0"
     private var pendingRegionBottom = "1.0"
 
+    companion object {
+        private const val REQUEST_CODE_NOTIFICATION_PERMISSION = 1001
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.getFloatArrayExtra("REGION_RESULT")?.let {
@@ -63,6 +67,12 @@ class ActionEditActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // 启动前台保活服务
+        AppKeepAliveService.start(this)
+
+        // Android 13+ 请求通知权限（非强制，拒绝后仅通知不显示）
+        requestNotificationPermission()
 
         // Launchers must be registered before setContent
         regionDrawLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -177,6 +187,24 @@ class ActionEditActivity : ComponentActivity() {
                         }
                     )
                 }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        AppKeepAliveService.stop(this)
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            try {
+                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                // 如果跳转失败，不影响应用运行（通知仅不显示，不会crash）
             }
         }
     }

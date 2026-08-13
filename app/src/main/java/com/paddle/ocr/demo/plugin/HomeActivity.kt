@@ -36,11 +36,18 @@ import com.paddle.ocr.demo.R
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 启动前台保活服务
+        AppKeepAliveService.start(this)
         setContent {
             MaterialTheme {
                 HomeScreen()
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        AppKeepAliveService.stop(this)
     }
 }
 
