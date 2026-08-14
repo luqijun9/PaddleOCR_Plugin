@@ -75,23 +75,17 @@ class ScreenCaptureService : Service() {
         }
         val targetText = intent.getStringExtra("targetText") ?: ""
         val isRegex = intent.getBooleanExtra("isRegex", false)
-        val fireIntent: Intent? = intent.getParcelableExtra("fireIntent")
+        val pendingIntent: android.app.PendingIntent? = intent.getParcelableExtra("pendingIntent")
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
         log("resultCode=$resultCode")
         log("targetText=$targetText, isRegex=$isRegex, isAppTest=$isAppTest")
         log("data action=${data.action}")
 
-        if (fireIntent != null) {
-            log("fireIntent action=${fireIntent.action}")
-            log("fireIntent extras keys=${fireIntent.extras?.keySet()}")
-            val completionStr = fireIntent.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
-            log("fireIntent hasCompletionIntent=${completionStr != null}")
-            if (completionStr != null) {
-                log("fireIntent completionIntentStr=$completionStr")
-            }
+        if (pendingIntent != null) {
+            log("pendingIntent is present")
         } else {
-            log("fireIntent is NULL!")
+            log("pendingIntent is NULL!")
         }
 
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -99,13 +93,13 @@ class ScreenCaptureService : Service() {
         log("mediaProjection created: ${mediaProjection != null}")
 
         log("calling captureScreenAndOcr")
-        captureScreenAndOcr(targetText, isRegex, fireIntent, isAppTest)
+        captureScreenAndOcr(targetText, isRegex, pendingIntent, isAppTest)
 
         return START_NOT_STICKY
     }
 
     @SuppressLint("WrongConstant")
-    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
+    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, pendingIntent: android.app.PendingIntent?, isAppTest: Boolean) {
         log("=== captureScreenAndOcr ===")
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
@@ -172,14 +166,14 @@ class ScreenCaptureService : Service() {
 
                 log("launching coroutine for OCR processing")
                 scope.launch {
-                    processOcr(croppedBitmap, targetText, isRegex, fireIntent, isAppTest)
+                    processOcr(croppedBitmap, targetText, isRegex, pendingIntent, isAppTest)
                     log("OCR processing done, calling stopSelf")
                     stopSelf()
                 }
             } else {
                 log("IMAGE IS NULL - screen capture failed!")
                 scope.launch {
-                    signalTaskerFinish(fireIntent, false, Bundle())
+                    signalTaskerFinish(pendingIntent, false, Bundle())
                     stopSelf()
                 }
             }
@@ -187,12 +181,12 @@ class ScreenCaptureService : Service() {
         log("onImageAvailable listener registered")
     }
 
-    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, fireIntent: Intent?, isAppTest: Boolean) {
+    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, pendingIntent: android.app.PendingIntent?, isAppTest: Boolean) {
         log("=== processOcr ===")
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
             log("OCR ENGINE IS NULL - not initialized!")
-            if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
+            if (!isAppTest) signalTaskerFinish(pendingIntent, false, Bundle())
             return
         }
         log("OCR engine available")
@@ -268,29 +262,40 @@ class ScreenCaptureService : Service() {
                 OCRApplication.instance.appTestResult.emit(Pair(bitmap, result))
             } else {
                 log("calling signalTaskerFinish with success=true")
-                signalTaskerFinish(fireIntent, true, bundle)
+                signalTaskerFinish(pendingIntent, true, bundle)
             }
 
         } catch (e: Exception) {
             log("OCR EXCEPTION: ${e.message}")
             Log.e(TAG, "[$SUB_TAG] OCR processing failed", e)
-            if (!isAppTest) signalTaskerFinish(fireIntent, false, Bundle())
+            if (!isAppTest) signalTaskerFinish(pendingIntent, false, Bundle())
         }
     }
 
-    private fun signalTaskerFinish(fireIntent: Intent?, success: Boolean, varsBundle: Bundle) {
+    private fun signalTaskerFinish(pendingIntent: android.app.PendingIntent?, success: Boolean, varsBundle: Bundle) {
         log("=== signalTaskerFinish ===")
-        log("success=$success, varsBundleKeys=${varsBundle.keySet()}")
+        log("pendingIntent=$pendingIntent, success=$success, varsBundleKeys=${varsBundle.keySet()}")
         
-        if (fireIntent == null) {
-            log("fireIntent is null, CANNOT signal Tasker!")
+        if (pendingIntent == null) {
+            log("pendingIntent is null, CANNOT signal Tasker!")
             return
         }
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
-        
-        val signaled = TaskerPlugin.Setting.signalFinish(this, fireIntent, resultCode, varsBundle)
-        log("signalFinish signaled=$signaled")
+        log("resultCode=$resultCode")
+
+        val resultIntent = Intent().apply {
+            putExtra(PluginResultsService.EXTRA_RESULT_CODE, resultCode)
+            putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, varsBundle)
+        }
+
+        try {
+            pendingIntent.send(this, 0, resultIntent)
+            log("pendingIntent sent successfully to PluginResultsService")
+        } catch (e: android.app.PendingIntent.CanceledException) {
+            log("pendingIntent CanceledException: ${e.message}")
+            e.printStackTrace()
+        }
 
         Handler(Looper.getMainLooper()).post {
             if (success) {

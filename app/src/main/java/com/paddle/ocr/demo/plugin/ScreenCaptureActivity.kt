@@ -18,7 +18,7 @@ class ScreenCaptureActivity : Activity() {
     private lateinit var mediaProjectionManager: MediaProjectionManager
     private var targetText: String = ""
     private var isRegex: Boolean = false
-    private var fireIntent: Intent? = null
+    private var pendingIntent: android.app.PendingIntent? = null
     private var isAppTest: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,21 +30,12 @@ class ScreenCaptureActivity : Activity() {
 
         targetText = intent.getStringExtra("targetText") ?: ""
         isRegex = intent.getBooleanExtra("isRegex", false)
-        fireIntent = intent.getParcelableExtra("fireIntent")
+        pendingIntent = intent.getParcelableExtra("pendingIntent")
         isAppTest = intent.getBooleanExtra("isAppTest", false)
         log("targetText=$targetText, isRegex=$isRegex, isAppTest=$isAppTest")
 
-        // 检查 fireIntent 是否完整
-        if (fireIntent != null) {
-            log("fireIntent action=${fireIntent!!.action}")
-            log("fireIntent extras=${fireIntent!!.extras?.keySet()}")
-            val completionStr = fireIntent!!.getStringExtra(TaskerPluginConstants.EXTRA_PLUGIN_COMPLETION_INTENT)
-            log("fireIntent hasCompletionIntent=${completionStr != null}")
-            if (completionStr != null) {
-                log("fireIntent completionIntentStr=$completionStr")
-            }
-        } else {
-            log("fireIntent is NULL!")
+        if (pendingIntent == null) {
+            log("pendingIntent is NULL!")
         }
 
         // 请求 MediaProjection 权限
@@ -71,7 +62,7 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("data", data)
                     putExtra("targetText", targetText)
                     putExtra("isRegex", isRegex)
-                    putExtra("fireIntent", fireIntent)
+                    putExtra("pendingIntent", pendingIntent)
                     putExtra("isAppTest", isAppTest)
                 }
                 log("serviceIntent created, calling startForegroundService")
@@ -94,15 +85,22 @@ class ScreenCaptureActivity : Activity() {
 
     private fun signalTaskerFinish(success: Boolean) {
         log("=== signalTaskerFinish (Activity) ===")
-        if (fireIntent == null) {
-            log("fireIntent is null, cannot signal!")
+        if (pendingIntent == null) {
+            log("pendingIntent is null, cannot signal!")
             return
         }
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
-        log("calling signalFinish with resultCode=$resultCode")
-        val signaled = TaskerPlugin.Setting.signalFinish(this, fireIntent!!, resultCode, Bundle())
-        log("signalFinish returned: signaled=$signaled")
+        log("sending pendingIntent with resultCode=$resultCode")
+        val resultIntent = Intent().apply {
+            putExtra(PluginResultsService.EXTRA_RESULT_CODE, resultCode)
+        }
+        try {
+            pendingIntent!!.send(this, 0, resultIntent)
+            log("pendingIntent sent successfully")
+        } catch (e: android.app.PendingIntent.CanceledException) {
+            log("pendingIntent CanceledException: ${e.message}")
+        }
     }
 
     private fun log(msg: String) {

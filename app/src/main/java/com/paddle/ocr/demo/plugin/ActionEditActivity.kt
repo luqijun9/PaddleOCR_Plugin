@@ -20,12 +20,18 @@ class ActionEditActivity : Activity() {
         checkIsRegex = findViewById(R.id.checkIsRegex)
 
         // Read existing bundle if editing
+        var instanceId: String? = null
         if (intent.action == TaskerPluginConstants.ACTION_EDIT_SETTING) {
             val bundle = intent.getBundleExtra(TaskerPluginConstants.EXTRA_BUNDLE)
             if (bundle != null) {
                 editTargetText.setText(bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, ""))
                 checkIsRegex.isChecked = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
+                instanceId = bundle.getString("plugin_instance_id")
             }
+        }
+        
+        if (instanceId == null) {
+            instanceId = java.util.UUID.randomUUID().toString()
         }
     }
 
@@ -37,6 +43,7 @@ class ActionEditActivity : Activity() {
         val resultBundle = Bundle().apply {
             putString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, targetText)
             putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, isRegex)
+            putString("plugin_instance_id", intent.getBundleExtra(TaskerPluginConstants.EXTRA_BUNDLE)?.getString("plugin_instance_id") ?: java.util.UUID.randomUUID().toString())
         }
 
         // Set blurb (description shown in Tasker)

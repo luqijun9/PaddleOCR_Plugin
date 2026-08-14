@@ -61,13 +61,25 @@ class OcrActionReceiver : BroadcastReceiver() {
             log("NOT ordered broadcast, cannot set pending result!")
         }
 
-        // 5. 启动 ScreenCaptureActivity
+        // 5. 创建 PendingIntent 指向 PluginResultsService
+        val resultsServiceIntent = Intent(context, PluginResultsService::class.java).apply {
+            putExtra(PluginResultsService.EXTRA_ORIGINAL_INTENT, intent)
+        }
+        val requestCode = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
+        val pendingIntentFlags = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_MUTABLE
+        } else {
+            android.app.PendingIntent.FLAG_ONE_SHOT
+        }
+        val pendingIntent = android.app.PendingIntent.getService(context, requestCode, resultsServiceIntent, pendingIntentFlags)
+
+        // 6. 启动 ScreenCaptureActivity
         log("--- starting ScreenCaptureActivity ---")
         val captureIntent = Intent(context, ScreenCaptureActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("targetText", targetText)
             putExtra("isRegex", isRegex)
-            putExtra("fireIntent", intent)
+            putExtra("pendingIntent", pendingIntent)
         }
         log("captureIntent created")
         context.startActivity(captureIntent)
