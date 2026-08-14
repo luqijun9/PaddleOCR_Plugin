@@ -67,6 +67,21 @@ class OcrActionReceiver : BroadcastReceiver() {
             // in the BroadcastReceiver's resultCode, so Tasker knows to wait for the completion intent.
             if (isOrderedBroadcast) {
                 resultCode = TaskerPlugin.Setting.RESULT_CODE_PENDING
+
+                // 注册可替换变量名到 resultExtras（Termux规范）
+                // 让 Tasker 知道后续回传时哪些 bundle key 需要做变量替换
+                val resultExtras = getResultExtras(true)
+                if (resultExtras != null) {
+                    val replaceKeys = arrayOf(
+                        TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT,
+                        TaskerPluginConstants.BUNDLE_KEY_FILE_PATH,
+                        TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT,
+                        TaskerPluginConstants.BUNDLE_KEY_REGION_TOP,
+                        TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT,
+                        TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM
+                    )
+                    TaskerPlugin.Setting.setVariableReplaceKeys(resultExtras, replaceKeys)
+                }
             }
 
             // ============================================================
@@ -180,7 +195,29 @@ class OcrActionReceiver : BroadcastReceiver() {
             putString("%match_center_x", "")
             putString("%match_center_y", "")
         }
-        TaskerPlugin.Setting.signalFinish(context, fireIntent, TaskerPlugin.Setting.RESULT_CODE_FAILED, varsBundle)
+
+        // 检查宿主是否支持变量返回（Termux规范）
+        val hostExtras = fireIntent.extras
+        if (hostExtras != null && TaskerPlugin.Setting.hostSupportsVariableReturn(hostExtras)) {
+            // 通过 addVariableBundle 写入变量到 getResultExtras(true)
+            val resultExtras = getResultExtras(true)
+            if (resultExtras != null) {
+                TaskerPlugin.addVariableBundle(resultExtras, varsBundle)
+            }
+            // 注册可替换变量名
+            val replaceKeys = arrayOf(
+                TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT,
+                TaskerPluginConstants.BUNDLE_KEY_FILE_PATH,
+                TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT,
+                TaskerPluginConstants.BUNDLE_KEY_REGION_TOP,
+                TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT,
+                TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM
+            )
+            TaskerPlugin.Setting.setVariableReplaceKeys(resultExtras, replaceKeys)
+            resultCode = TaskerPlugin.Setting.RESULT_CODE_FAILED
+        } else {
+            TaskerPlugin.Setting.signalFinish(context, fireIntent, TaskerPlugin.Setting.RESULT_CODE_FAILED, varsBundle)
+        }
     }
 
     private fun log(msg: String) {

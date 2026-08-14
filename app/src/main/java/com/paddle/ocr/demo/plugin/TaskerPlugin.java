@@ -404,7 +404,224 @@ public class TaskerPlugin {
         }
     }
 
-    // ----------------------------- HELPER FUNCTIONS -------------------------------- //
+    // ----------------------------- EVENT PLUGIN ONLY --------------------------------- //
+
+    /**
+     * 用于 Event 插件（如系统事件、定时事件触发的插件）。
+     * 对应的接收器需继承 BroadcastReceiver 并处理 FIRE_SETTING action。
+     * 参考 Termux:Tasker 的 Event 内部类实现。
+     */
+    public static class Event {
+
+        /**
+         * Bundle key for pass-through data message ID.
+         */
+        private final static String PASS_THROUGH_BUNDLE_MESSAGE_ID_KEY = BASE_KEY + ".PASS_THROUGH_BUNDLE_MESSAGE_ID";
+
+        /**
+         * Extra for host to request query pass-through data.
+         */
+        private final static String EXTRA_REQUEST_QUERY_PASS_THROUGH_DATA = EXTRAS_PREFIX + "REQUEST_QUERY_PASS_THROUGH_DATA";
+
+        /**
+         * Used by: plugin FireReceiver (onReceive)
+         *
+         * Check if the host supports query pass-through data requests.
+         *
+         * @param extrasFromHost extras from the host intent
+         * @return true if host supports request query pass-through data
+         */
+        public static boolean hostSupportsRequestQueryDataPassThrough(Bundle extrasFromHost) {
+            return hostSupports(extrasFromHost, EXTRA_HOST_CAPABILITY_REQUEST_QUERY_DATA_PASS_THROUGH);
+        }
+
+        /**
+         * Used by: plugin FireReceiver (onReceive)
+         *
+         * Add pass-through data to the intent that is sent back to the host.
+         * The host can use this data to pass through to other plugins or tasks.
+         *
+         * @param requestQueryIntent the intent that will be sent back to the host
+         * @param data the data to pass through
+         */
+        public static void addPassThroughData(Intent requestQueryIntent, Bundle data) {
+            Bundle passThroughBundle = retrieveOrCreatePassThroughBundle(requestQueryIntent);
+            if (data != null) {
+                passThroughBundle.putAll(data);
+            }
+            requestQueryIntent.putExtra(EXTRA_REQUEST_QUERY_PASS_THROUGH_DATA, true);
+        }
+
+        /**
+         * Used by: plugin QueryReceiver (onReceive)
+         *
+         * Retrieve pass-through data from the host's request intent.
+         *
+         * @param requestQueryIntent the intent received from the host
+         * @return Bundle containing the pass-through data, or null if not present
+         */
+        public static Bundle retrievePassThroughData(Intent requestQueryIntent) {
+            Bundle extras = requestQueryIntent.getExtras();
+            if (extras == null) return null;
+            Bundle passThroughBundle = extras.getBundle(PASS_THROUGH_BUNDLE_MESSAGE_ID_KEY);
+            if (passThroughBundle == null) return null;
+            Bundle data = passThroughBundle.getBundle(PASS_THROUGH_BUNDLE_MESSAGE_ID_KEY + ".data");
+            return data;
+        }
+
+        /**
+         * Used by: plugin FireReceiver (onReceive)
+         *
+         * Add a non-repeating message ID to pass-through data for verification.
+         *
+         * @param requestQueryIntent the intent that will be sent back to the host
+         */
+        public static void addPassThroughMessageID(Intent requestQueryIntent) {
+            Bundle passThroughBundle = retrieveOrCreatePassThroughBundle(requestQueryIntent);
+            passThroughBundle.putInt(
+                    PASS_THROUGH_BUNDLE_MESSAGE_ID_KEY + ".id",
+                    getPositiveNonRepeatingRandomInteger()
+            );
+        }
+
+        /**
+         * Used by: plugin QueryReceiver (onReceive)
+         *
+         * Retrieve the message ID from pass-through data.
+         *
+         * @param requestQueryIntent the intent received from the host
+         * @return the message ID, or -1 if not found
+         */
+        public static int retrievePassThroughMessageID(Intent requestQueryIntent) {
+            Bundle extras = requestQueryIntent.getExtras();
+            if (extras == null) return -1;
+            Bundle passThroughBundle = extras.getBundle(PASS_THROUGH_BUNDLE_MESSAGE_ID_KEY);
+            if (passThroughBundle == null) return -1;
+            return passThroughBundle.getInt(PASS_THROUGH_BUNDLE_MESSAGE_ID_KEY + ".id", -1);
+        }
+
+        /**
+         * Retrieve or create the pass-through bundle in the intent.
+         */
+        private static Bundle retrieveOrCreatePassThroughBundle(Intent intent) {
+            Bundle extras = intent.getExtras();
+            if (extras == null) {
+                extras = new Bundle();
+                intent.replaceExtras(extras);
+            }
+            Bundle passThroughBundle = extras.getBundle(PASS_THROUGH_BUNDLE_MESSAGE_ID_KEY);
+            if (passThroughBundle == null) {
+                passThroughBundle = new Bundle();
+                extras.putBundle(PASS_THROUGH_BUNDLE_MESSAGE_ID_KEY, passThroughBundle);
+            }
+            return passThroughBundle;
+        }
+    }
+
+    // ----------------------------- HOST PLUGIN ONLY --------------------------------- //
+
+    /**
+     * Host 端接口：用于 Tasker（或兼容宿主）向插件传递能力标志、完成 Intent 等信息。
+     * 参考 Termux:Tasker 的 Host 内部类实现。
+     */
+    public static class Host {
+
+        /**
+         * Used by: host app (Tasker)
+         *
+         * Add capability flags to the intent sent to the plugin.
+         *
+         * @param intentToPlugin the intent being sent to the plugin
+         * @param capabilities bitwise OR of capability flags
+         */
+        public static void addCapabilities(Intent intentToPlugin, int capabilities) {
+            intentToPlugin.putExtra(EXTRA_HOST_CAPABILITIES, capabilities);
+        }
+
+        /**
+         * Used by: host app (Tasker)
+         *
+         * Add a completion intent to the fire intent so the plugin can signal back.
+         * Supports callService (with optional foreground), startForegroundService, and sendBroadcast.
+         *
+         * @param fireIntent the intent being sent to the plugin receiver
+         * @param completionIntent the intent the plugin should use to signal completion
+         */
+        public static void addCompletionIntent(Intent fireIntent, Intent completionIntent) {
+            String packageName = completionIntent.getPackage();
+            String componentName = null;
+            if (completionIntent.getComponent() != null) {
+                componentName = completionIntent.getComponent().getClassName();
+            }
+            if (packageName != null && componentName != null) {
+                // callService mode (Android Service)
+                completionIntent.putExtra(Setting.EXTRA_CALL_SERVICE_PACKAGE, packageName);
+                completionIntent.putExtra(Setting.EXTRA_CALL_SERVICE, componentName);
+                completionIntent.putExtra(Setting.EXTRA_CALL_SERVICE_FOREGROUND, false);
+            } else {
+                // sendBroadcast mode (default)
+                // No extra service info needed
+            }
+            String completionIntentString = completionIntent.toUri(Intent.URI_INTENT_SCHEME);
+            fireIntent.putExtra(Setting.EXTRA_PLUGIN_COMPLETION_INTENT, completionIntentString);
+        }
+
+        /**
+         * Used by: host app (Tasker)
+         *
+         * Extract the result code from a completion intent.
+         *
+         * @param completionIntent the intent used for completion signalling
+         * @return the result code, or -1 if not found
+         */
+        public static int getSettingResultCode(Intent completionIntent) {
+            return completionIntent.getIntExtra(Setting.EXTRA_RESULT_CODE, -1);
+        }
+
+        /**
+         * Used by: host app (Tasker)
+         *
+         * Extract the variables bundle from a completion intent.
+         *
+         * @param completionIntent the intent used for completion signalling
+         * @return the variables bundle, or null if not found
+         */
+        public static Bundle getVariablesBundle(Intent completionIntent) {
+            Bundle extras = completionIntent.getExtras();
+            if (extras == null) return null;
+            return extras.getBundle(EXTRA_VARIABLES_BUNDLE);
+        }
+
+        /**
+         * Used by: host app (Tasker)
+         *
+         * Add a timeout hint to the fire intent so the plugin knows the expected timeout.
+         *
+         * @param intentToPlugin the intent being sent to the plugin
+         * @param timeoutMS the timeout hint in milliseconds
+         */
+        public static void addHintTimeoutMS(Intent intentToPlugin, int timeoutMS) {
+            Bundle hintsBundle = new Bundle();
+            hintsBundle.putInt(BUNDLE_KEY_HINT_TIMEOUT_MS, timeoutMS);
+            intentToPlugin.putExtra(EXTRA_HINTS_BUNDLE, hintsBundle);
+        }
+
+        /**
+         * Used by: host app (Tasker)
+         *
+         * Get the set of keys with a specific encoding from a bundle.
+         *
+         * @param resultBundle the bundle containing the results
+         * @param encoding the encoding to check for
+         * @return array of key names with the specified encoding
+         */
+        public static String[] getKeysWithEncoding(Bundle resultBundle, Encoding encoding) {
+            if (Encoding.JSON.equals(encoding)) {
+                return getStringArrayFromBundleString(resultBundle, BUNDLE_KEY_ENCODING_JSON_KEYS, "getKeysWithEncoding");
+            }
+            return new String[0];
+        }
+    }
 
     private static Object getBundleValueSafe( Bundle b, String key, Class<?> expectedClass, String funcName ) {
         Object value = null;

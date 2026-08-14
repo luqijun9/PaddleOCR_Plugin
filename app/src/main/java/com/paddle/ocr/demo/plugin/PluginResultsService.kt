@@ -55,7 +55,19 @@ class PluginResultsService : IntentService("PluginResultsService") {
         val resultCode = intent.getIntExtra(EXTRA_PLUGIN_RESULT_CODE, TaskerPlugin.Setting.RESULT_CODE_OK)
         log("resultCode=$resultCode")
 
-        // 4. 通过原始 fireIntent 调用 signalFinish 回传给 Tasker
+        // 4. 在 signalFinish 前注册变量替换（Termux规范）
+        //    让 Tasker 知道 resultBundle 中哪些 key 的值需要做 %var 替换
+        val replaceKeys = arrayOf(
+            TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT,
+            TaskerPluginConstants.BUNDLE_KEY_FILE_PATH,
+            TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT,
+            TaskerPluginConstants.BUNDLE_KEY_REGION_TOP,
+            TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT,
+            TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM
+        )
+        TaskerPlugin.Setting.setVariableReplaceKeys(resultBundle, replaceKeys)
+
+        // 5. 通过原始 fireIntent 调用 signalFinish 回传给 Tasker
         val signaled = TaskerPlugin.Setting.signalFinish(this, originalIntent, resultCode, resultBundle)
         log("signalFinish signaled=$signaled")
     }

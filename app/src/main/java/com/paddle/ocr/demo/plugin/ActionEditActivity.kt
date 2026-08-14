@@ -68,6 +68,17 @@ class ActionEditActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // 处理用户取消操作（按返回键）：返回 cancelled 状态给 Tasker
+        onBackPressedDispatcher.addCallback(this) {
+            // 用户取消编辑，通知 Tasker 返回 RESULT_CODE_FAILED（取消状态）
+            val cancelIntent = Intent()
+            val cancelBundle = Bundle()
+            // 使用 signalFinish 方式返回失败状态（如果原本有 fireIntent 信息则通过它回传）
+            // 标准做法：setResult(RESULT_CANCELED) 已足够让 Tasker 知道用户取消了编辑
+            setResult(Activity.RESULT_CANCELED, cancelIntent)
+            finish()
+        }
+
         // 启动前台保活服务
         AppKeepAliveService.start(this)
 
@@ -256,8 +267,9 @@ class ActionEditActivity : ComponentActivity() {
         )
         TaskerPlugin.addRelevantVariableList(resultIntent, variables)
 
-        resultBundle.putStringArray(
-            "net.dinglisch.android.tasker.extras.VARIABLE_REPLACE_KEYS",
+        // 使用 TaskerPlugin 官方 API 注册变量替换 key（替代硬编码方式）
+        TaskerPlugin.Setting.setVariableReplaceKeys(
+            resultBundle,
             arrayOf(
                 TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT,
                 TaskerPluginConstants.BUNDLE_KEY_FILE_PATH,
