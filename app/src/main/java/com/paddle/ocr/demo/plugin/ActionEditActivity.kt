@@ -16,6 +16,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -69,15 +70,15 @@ class ActionEditActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // 处理用户取消操作（按返回键）：返回 cancelled 状态给 Tasker
-        onBackPressedDispatcher.addCallback(this) {
-            // 用户取消编辑，通知 Tasker 返回 RESULT_CODE_FAILED（取消状态）
-            val cancelIntent = Intent()
-            val cancelBundle = Bundle()
-            // 使用 signalFinish 方式返回失败状态（如果原本有 fireIntent 信息则通过它回传）
-            // 标准做法：setResult(RESULT_CANCELED) 已足够让 Tasker 知道用户取消了编辑
-            setResult(Activity.RESULT_CANCELED, cancelIntent)
-            finish()
-        }
+        onBackPressedDispatcher.addCallback(
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    // 用户取消编辑，通知 Tasker 返回 cancelled 状态
+                    setResult(Activity.RESULT_CANCELED, Intent())
+                    finish()
+                }
+            }
+        )
 
         // 启动前台保活服务
         AppKeepAliveService.start(this)
