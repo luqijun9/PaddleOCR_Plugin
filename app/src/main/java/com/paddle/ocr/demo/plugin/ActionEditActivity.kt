@@ -523,7 +523,7 @@ fun ActionEditScreen(
                     }
 
                     VariableRow(name = "%ocr_full_text", desc = "识别出的所有文本拼接")
-                    VariableRow(name = "%ocr_json", desc = "带文字框坐标与置信度的 JSON 数组")
+                    VariableRow(name = "%ocr_json", desc = "含 text, confidence, startX/Y, endX/Y, centerX/Y, bounds 的 JSON 数组")
                     VariableRow(name = "%match_found", desc = "是否匹配到目标文字 (true / false)")
                     VariableRow(name = "%match_center_x", desc = "匹配文字中心点 X 轴坐标 (像素)")
                     VariableRow(name = "%match_center_y", desc = "匹配文字中心点 Y 轴坐标 (像素)")

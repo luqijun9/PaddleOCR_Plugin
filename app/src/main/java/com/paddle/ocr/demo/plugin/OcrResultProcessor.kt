@@ -78,18 +78,24 @@ object OcrResultProcessor {
             result.results.forEachIndexed { i, ocrResult ->
                 fullTextBuilder.append(ocrResult.text).append("\n")
 
+                val startX = ocrResult.box.points.minOf { it.x }
+                val startY = ocrResult.box.points.minOf { it.y }
+                val endX = ocrResult.box.points.maxOf { it.x }
+                val endY = ocrResult.box.points.maxOf { it.y }
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val bounds = "($startX, $startY) - ($endX, $endY)"
+
                 val jsonObj = JSONObject().apply {
                     put("text", ocrResult.text)
                     put("confidence", ocrResult.confidence)
-                    val boxArr = JSONArray()
-                    ocrResult.box.points.forEach { point ->
-                        val pointObj = JSONObject().apply {
-                            put("x", point.x)
-                            put("y", point.y)
-                        }
-                        boxArr.put(pointObj)
-                    }
-                    put("box", boxArr)
+                    put("startX", startX)
+                    put("startY", startY)
+                    put("endX", endX)
+                    put("endY", endY)
+                    put("centerX", centerX)
+                    put("centerY", centerY)
+                    put("bounds", bounds)
                 }
                 jsonArray.put(jsonObj)
 
@@ -108,10 +114,8 @@ object OcrResultProcessor {
 
                     if (isMatch) {
                         matchFound = true
-                        val tl = ocrResult.box.points[0]
-                        val br = ocrResult.box.points[2]
-                        matchCenterX = (tl.x + br.x) / 2f
-                        matchCenterY = (tl.y + br.y) / 2f
+                        matchCenterX = centerX.toFloat()
+                        matchCenterY = centerY.toFloat()
                         Log.d(TAG, "[$SUB_TAG] Match found in item[$i] at center ($matchCenterX, $matchCenterY)")
                     }
                 }
