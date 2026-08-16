@@ -46,6 +46,8 @@ class ActionEditActivity : ComponentActivity() {
     private var initialImagePath: String = ""
     private var initialTargetText: String = ""
     private var initialIsRegex: Boolean = false
+    private var initialIsExactMatch: Boolean = false
+    private var initialIsIgnoreCase: Boolean = true
     private var instanceId: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,6 +65,8 @@ class ActionEditActivity : ComponentActivity() {
                 initialImagePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH, "")
                 initialTargetText = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, "")
                 initialIsRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
+                initialIsExactMatch = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, false)
+                initialIsIgnoreCase = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, true)
                 instanceId = bundle.getString("plugin_instance_id") ?: UUID.randomUUID().toString()
             }
         }
@@ -77,8 +81,10 @@ class ActionEditActivity : ComponentActivity() {
                     initialImagePath = initialImagePath,
                     initialTargetText = initialTargetText,
                     initialIsRegex = initialIsRegex,
-                    onSave = { imageSource, imagePath, targetText, isRegex ->
-                        saveAndFinish(imageSource, imagePath, targetText, isRegex)
+                    initialIsExactMatch = initialIsExactMatch,
+                    initialIsIgnoreCase = initialIsIgnoreCase,
+                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase ->
+                        saveAndFinish(imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase)
                     },
                     onCancel = {
                         finish()
@@ -92,7 +98,9 @@ class ActionEditActivity : ComponentActivity() {
         imageSource: String,
         imagePath: String,
         targetText: String,
-        isRegex: Boolean
+        isRegex: Boolean,
+        isExactMatch: Boolean,
+        isIgnoreCase: Boolean
     ) {
         val resultIntent = Intent()
         val resultBundle = Bundle().apply {
@@ -100,6 +108,8 @@ class ActionEditActivity : ComponentActivity() {
             putString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH, imagePath)
             putString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, targetText)
             putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, isRegex)
+            putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, isExactMatch)
+            putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, isIgnoreCase)
             putString("plugin_instance_id", instanceId)
         }
 
@@ -153,7 +163,9 @@ fun ActionEditScreen(
     initialImagePath: String,
     initialTargetText: String,
     initialIsRegex: Boolean,
-    onSave: (String, String, String, Boolean) -> Unit,
+    initialIsExactMatch: Boolean,
+    initialIsIgnoreCase: Boolean,
+    onSave: (String, String, String, Boolean, Boolean, Boolean) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
@@ -161,6 +173,8 @@ fun ActionEditScreen(
     var imagePath by remember { mutableStateOf(initialImagePath) }
     var targetText by remember { mutableStateOf(initialTargetText) }
     var isRegex by remember { mutableStateOf(initialIsRegex) }
+    var isExactMatch by remember { mutableStateOf(initialIsExactMatch) }
+    var isIgnoreCase by remember { mutableStateOf(initialIsIgnoreCase) }
 
     // 系统文件管理器 (DocumentsUI) 选择器 Launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -186,7 +200,7 @@ fun ActionEditScreen(
 
     // 返回键默认自动保存
     BackHandler {
-        onSave(imageSource, imagePath, targetText, isRegex)
+        onSave(imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase)
     }
 
     Scaffold(
@@ -208,7 +222,7 @@ fun ActionEditScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onSave(imageSource, imagePath, targetText, isRegex) }) {
+                    IconButton(onClick = { onSave(imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase) }) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = stringResource(R.string.btn_save),
@@ -241,7 +255,7 @@ fun ActionEditScreen(
                         Text(stringResource(R.string.btn_clear))
                     }
                     Button(
-                        onClick = { onSave(imageSource, imagePath, targetText, isRegex) },
+                        onClick = { onSave(imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase) },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -470,6 +484,34 @@ fun ActionEditScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
+                    // 匹配范围 (包含 / 完全匹配)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.match_scope),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        val scopeOptions = listOf(
+                            stringResource(R.string.contains_match),
+                            stringResource(R.string.exact_match)
+                        )
+                        val selectedScopeIndex = if (isExactMatch) 1 else 0
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            scopeOptions.forEachIndexed { index, label ->
+                                SegmentedButton(
+                                    selected = selectedScopeIndex == index,
+                                    onClick = { isExactMatch = (index == 1) },
+                                    shape = SegmentedButtonDefaults.itemShape(index = index, count = scopeOptions.size)
+                                ) {
+                                    Text(label)
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // 选项 1: 正则表达式
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -490,6 +532,32 @@ fun ActionEditScreen(
                         Switch(
                             checked = isRegex,
                             onCheckedChange = { isRegex = it }
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // 选项 2: 忽略大小写
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.switch_ignore_case),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = stringResource(R.string.desc_ignore_case),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isIgnoreCase,
+                            onCheckedChange = { isIgnoreCase = it }
                         )
                     }
                 }

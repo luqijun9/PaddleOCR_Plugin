@@ -78,11 +78,13 @@ class ScreenCaptureService : Service() {
         }
         val targetText = intent.getStringExtra("targetText") ?: ""
         val isRegex = intent.getBooleanExtra("isRegex", false)
+        val isExactMatch = intent.getBooleanExtra("isExactMatch", false)
+        val isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", true)
         val pendingIntent: android.app.PendingIntent? = intent.getParcelableExtra("pendingIntent")
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
         log("resultCode=$resultCode")
-        log("targetText=$targetText, isRegex=$isRegex, isAppTest=$isAppTest")
+        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, isAppTest=$isAppTest")
         log("data action=${data.action}")
 
         if (pendingIntent != null) {
@@ -96,13 +98,20 @@ class ScreenCaptureService : Service() {
         log("mediaProjection created: ${mediaProjection != null}")
 
         log("calling captureScreenAndOcr")
-        captureScreenAndOcr(targetText, isRegex, pendingIntent, isAppTest)
+        captureScreenAndOcr(targetText, isRegex, isExactMatch, isIgnoreCase, pendingIntent, isAppTest)
 
         return START_NOT_STICKY
     }
 
     @SuppressLint("WrongConstant")
-    private fun captureScreenAndOcr(targetText: String, isRegex: Boolean, pendingIntent: android.app.PendingIntent?, isAppTest: Boolean) {
+    private fun captureScreenAndOcr(
+        targetText: String,
+        isRegex: Boolean,
+        isExactMatch: Boolean,
+        isIgnoreCase: Boolean,
+        pendingIntent: android.app.PendingIntent?,
+        isAppTest: Boolean
+    ) {
         log("=== captureScreenAndOcr ===")
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
@@ -188,7 +197,7 @@ class ScreenCaptureService : Service() {
 
                 log("launching coroutine for OCR processing")
                 scope.launch {
-                    processOcr(croppedBitmap, targetText, isRegex, pendingIntent, isAppTest)
+                    processOcr(croppedBitmap, targetText, isRegex, isExactMatch, isIgnoreCase, pendingIntent, isAppTest)
                     log("OCR processing done, calling stopSelf")
                     stopSelf()
                 }
@@ -207,9 +216,23 @@ class ScreenCaptureService : Service() {
         log("onImageAvailable listener registered")
     }
 
-    private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, pendingIntent: android.app.PendingIntent?, isAppTest: Boolean) {
+    private suspend fun processOcr(
+        bitmap: Bitmap,
+        targetText: String,
+        isRegex: Boolean,
+        isExactMatch: Boolean,
+        isIgnoreCase: Boolean,
+        pendingIntent: android.app.PendingIntent?,
+        isAppTest: Boolean
+    ) {
         log("=== processOcr (via OcrResultProcessor) ===")
-        val result = OcrResultProcessor.process(bitmap, targetText, isRegex)
+        val result = OcrResultProcessor.process(
+            bitmap = bitmap,
+            targetText = targetText,
+            isRegex = isRegex,
+            isExactMatch = isExactMatch,
+            isIgnoreCase = isIgnoreCase
+        )
         log("OcrResultProcessor returned success=${result.success}, matchFound=${result.matchFound}, error=${result.errorMessage}")
 
         val durationMs = if (captureStartTime > 0) System.currentTimeMillis() - captureStartTime else 0

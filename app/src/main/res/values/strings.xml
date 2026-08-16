@@ -23,8 +23,13 @@
     <string name="section_target_text">Target Match Text (Optional)</string>
     <string name="label_target_text">Target Text / Keyword</string>
     <string name="placeholder_target_text">Leave empty for full screen text recognition</string>
+    <string name="match_scope">Match Scope</string>
+    <string name="contains_match">Contains</string>
+    <string name="exact_match">Exact Match</string>
     <string name="switch_use_regex">Use Regular Expression</string>
     <string name="desc_use_regex">Enable regex matching (e.g. \\d{4,6} for verification codes)</string>
+    <string name="switch_ignore_case">Ignore Case</string>
+    <string name="desc_ignore_case">Match regardless of upper/lower case (e.g. ABC matches abc)</string>
     <string name="section_output_variables">Output Variables</string>
     <string name="var_desc_full_text">All recognized text concatenated</string>
     <string name="var_desc_json">JSON array with text, confidence, startX/Y, endX/Y, centerX/Y, bounds</string>

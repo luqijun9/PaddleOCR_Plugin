@@ -18,6 +18,8 @@ class ScreenCaptureActivity : Activity() {
     private lateinit var mediaProjectionManager: MediaProjectionManager
     private var targetText: String = ""
     private var isRegex: Boolean = false
+    private var isExactMatch: Boolean = false
+    private var isIgnoreCase: Boolean = true
     private var pendingIntent: android.app.PendingIntent? = null
     private var isAppTest: Boolean = false
 
@@ -30,9 +32,11 @@ class ScreenCaptureActivity : Activity() {
 
         targetText = intent.getStringExtra("targetText") ?: ""
         isRegex = intent.getBooleanExtra("isRegex", false)
+        isExactMatch = intent.getBooleanExtra("isExactMatch", false)
+        isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", true)
         pendingIntent = intent.getParcelableExtra("pendingIntent")
         isAppTest = intent.getBooleanExtra("isAppTest", false)
-        log("targetText=$targetText, isRegex=$isRegex, isAppTest=$isAppTest")
+        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, isAppTest=$isAppTest")
 
         if (pendingIntent == null) {
             log("pendingIntent is NULL!")
@@ -62,6 +66,8 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("data", data)
                     putExtra("targetText", targetText)
                     putExtra("isRegex", isRegex)
+                    putExtra("isExactMatch", isExactMatch)
+                    putExtra("isIgnoreCase", isIgnoreCase)
                     putExtra("pendingIntent", pendingIntent)
                     putExtra("isAppTest", isAppTest)
                 }

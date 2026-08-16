@@ -53,7 +53,9 @@ object OcrResultProcessor {
     suspend fun process(
         bitmap: Bitmap,
         targetText: String,
-        isRegex: Boolean
+        isRegex: Boolean = false,
+        isExactMatch: Boolean = false,
+        isIgnoreCase: Boolean = true
     ): OcrProcessResult {
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
@@ -100,17 +102,24 @@ object OcrResultProcessor {
                 }
                 jsonArray.put(jsonObj)
 
-                // 正则或关键字匹配
+                // 目标匹配逻辑 (包含 / 完全匹配 / 正则 / 忽略大小写)
                 if (!matchFound && targetText.isNotEmpty()) {
                     val isMatch = if (isRegex) {
                         try {
-                            Regex(targetText).containsMatchIn(ocrResult.text)
+                            val regexOptions = if (isIgnoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet()
+                            if (isExactMatch) {
+                                Regex(targetText, regexOptions).matches(ocrResult.text)
+                            } else {
+                                Regex(targetText, regexOptions).containsMatchIn(ocrResult.text)
+                            }
                         } catch (e: Exception) {
                             Log.w(TAG, "[$SUB_TAG] Regex syntax error: ${e.message}")
                             false
                         }
+                    } else if (isExactMatch) {
+                        ocrResult.text.equals(targetText, ignoreCase = isIgnoreCase)
                     } else {
-                        ocrResult.text.contains(targetText)
+                        ocrResult.text.contains(targetText, ignoreCase = isIgnoreCase)
                     }
 
                     if (isMatch) {

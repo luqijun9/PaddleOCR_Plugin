@@ -56,10 +56,12 @@ class OcrActionReceiver : BroadcastReceiver() {
 
         val targetText = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT) ?: ""
         val isRegex = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX) ?: false
+        val isExactMatch = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, false) ?: false
+        val isIgnoreCase = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, true) ?: true
         val imageSource = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_SOURCE) ?: TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE
         val imagePath = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH) ?: ""
 
-        log("targetText='$targetText', isRegex=$isRegex, imageSource=$imageSource, imagePath='$imagePath'")
+        log("targetText='$targetText', isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, imageSource=$imageSource, imagePath='$imagePath'")
 
         // 4. 设置 RESULT_CODE_PENDING
         if (isOrderedBroadcast) {
@@ -91,7 +93,13 @@ class OcrActionReceiver : BroadcastReceiver() {
                 try {
                     val result = when (val loadResult = ImageFileLoader.loadBitmap(context, imagePath)) {
                         is ImageLoadResult.Success -> {
-                            val res = OcrResultProcessor.process(loadResult.bitmap, targetText, isRegex)
+                            val res = OcrResultProcessor.process(
+                                bitmap = loadResult.bitmap,
+                                targetText = targetText,
+                                isRegex = isRegex,
+                                isExactMatch = isExactMatch,
+                                isIgnoreCase = isIgnoreCase
+                            )
                             try {
                                 if (!loadResult.bitmap.isRecycled) {
                                     loadResult.bitmap.recycle()
@@ -182,7 +190,13 @@ class OcrActionReceiver : BroadcastReceiver() {
                     val screenshotResult = OcrAccessibilityService.takeScreenshotSuspend(context)
                     val result = if (screenshotResult.isSuccess) {
                         val bitmap = screenshotResult.getOrThrow()
-                        val res = OcrResultProcessor.process(bitmap, targetText, isRegex)
+                        val res = OcrResultProcessor.process(
+                            bitmap = bitmap,
+                            targetText = targetText,
+                            isRegex = isRegex,
+                            isExactMatch = isExactMatch,
+                            isIgnoreCase = isIgnoreCase
+                        )
                         try {
                             if (!bitmap.isRecycled) bitmap.recycle()
                         } catch (ignore: Exception) {}
@@ -241,6 +255,8 @@ class OcrActionReceiver : BroadcastReceiver() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("targetText", targetText)
             putExtra("isRegex", isRegex)
+            putExtra("isExactMatch", isExactMatch)
+            putExtra("isIgnoreCase", isIgnoreCase)
             putExtra("pendingIntent", pendingIntent)
         }
         log("captureIntent created")
