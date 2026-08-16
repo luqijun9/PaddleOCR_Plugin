@@ -98,23 +98,31 @@ class OcrActionReceiver : BroadcastReceiver() {
                     }
 
                     val finalResultCode = if (result.success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
-                    val resultIntent = Intent().apply {
-                        putExtra(PluginResultsService.EXTRA_RESULT_CODE, finalResultCode)
-                        putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, result.toTaskerBundle())
+                    val varsBundle = result.toTaskerBundle()
+
+                    // 1. 直接通过 signalFinish 发送完成广播给 Tasker / MacroDroid
+                    val signaled = TaskerPlugin.Setting.signalFinish(context, intent, finalResultCode, varsBundle)
+                    log("File mode signalFinish directly returned: $signaled")
+
+                    // 2. 兜底尝试 pendingIntent
+                    try {
+                        val resultIntent = Intent().apply {
+                            putExtra(PluginResultsService.EXTRA_RESULT_CODE, finalResultCode)
+                            putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, varsBundle)
+                        }
+                        pendingIntent.send(context, 0, resultIntent)
+                    } catch (e: Exception) {
+                        log("pendingIntent fallback send notice: ${e.message}")
                     }
-                    pendingIntent.send(context, 0, resultIntent)
+
                     log("File mode OCR finished. Success=${result.success}, matchFound=${result.matchFound}")
                 } catch (e: Throwable) {
                     log("File mode OCR exception: ${e.message}")
                     val errBundle = Bundle().apply {
                         putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "图片识别异常: ${e.message ?: "未知错误"}")
                     }
-                    val errIntent = Intent().apply {
-                        putExtra(PluginResultsService.EXTRA_RESULT_CODE, TaskerPlugin.Setting.RESULT_CODE_FAILED)
-                        putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, errBundle)
-                    }
                     try {
-                        pendingIntent.send(context, 0, errIntent)
+                        TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)
                     } catch (ignore: Exception) {}
                 } finally {
                     pendingResult.finish()

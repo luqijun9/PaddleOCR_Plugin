@@ -33,26 +33,12 @@ object ImageFileLoader {
 
         Log.d(TAG, "[$SUB_TAG] Loading image from: $trimmed")
 
-        val uri: Uri = when {
-            trimmed.startsWith("content://") || trimmed.startsWith("file://") -> {
-                Uri.parse(trimmed)
-            }
-            else -> {
-                val file = File(trimmed)
-                if (!file.exists() || !file.canRead()) {
-                    Log.e(TAG, "[$SUB_TAG] File does not exist or cannot be read: $trimmed")
-                    return null
-                }
-                Uri.fromFile(file)
-            }
-        }
-
         return try {
             // 1. 测量图片原始尺寸
             val options = BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
             }
-            openInputStream(context, uri)?.use { stream ->
+            openInputStream(context, trimmed)?.use { stream ->
                 BitmapFactory.decodeStream(stream, null, options)
             }
 
@@ -69,7 +55,7 @@ object ImageFileLoader {
             Log.d(TAG, "[$SUB_TAG] Original size: ${options.outWidth}x${options.outHeight}, inSampleSize=${options.inSampleSize}")
 
             // 3. 解码 Bitmap
-            var bitmap: Bitmap? = openInputStream(context, uri)?.use { stream ->
+            var bitmap: Bitmap? = openInputStream(context, trimmed)?.use { stream ->
                 BitmapFactory.decodeStream(stream, null, options)
             }
 
@@ -79,7 +65,7 @@ object ImageFileLoader {
             }
 
             // 4. 读取 EXIF 并自动旋转
-            val orientation = getExifOrientation(context, uri)
+            val orientation = getExifOrientation(context, trimmed)
             if (orientation != 0) {
                 Log.d(TAG, "[$SUB_TAG] Applying EXIF rotation: ${orientation}°")
                 bitmap = rotateBitmap(bitmap, orientation)
@@ -93,8 +79,27 @@ object ImageFileLoader {
         }
     }
 
-    private fun openInputStream(context: Context, uri: Uri): InputStream? {
-        return context.contentResolver.openInputStream(uri)
+    private fun openInputStream(context: Context, pathOrUri: String): InputStream? {
+        val trimmed = pathOrUri.trim()
+        return try {
+            if (trimmed.startsWith("content://")) {
+                context.contentResolver.openInputStream(Uri.parse(trimmed))
+            } else {
+                val filePath = if (trimmed.startsWith("file://")) trimmed.substring(7) else trimmed
+                val file = File(filePath)
+                if (file.exists() && file.canRead()) {
+                    java.io.FileInputStream(file)
+                } else if (trimmed.startsWith("file://")) {
+                    context.contentResolver.openInputStream(Uri.parse(trimmed))
+                } else {
+                    // Try open as file fallback
+                    java.io.FileInputStream(file)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "[$SUB_TAG] openInputStream failed for $trimmed: ${e.message}")
+            null
+        }
     }
 
     private fun calculateInSampleSize(width: Int, height: Int, maxDim: Int): Int {
@@ -109,9 +114,9 @@ object ImageFileLoader {
         return sampleSize.coerceAtLeast(1)
     }
 
-    private fun getExifOrientation(context: Context, uri: Uri): Int {
+    private fun getExifOrientation(context: Context, pathOrUri: String): Int {
         return try {
-            openInputStream(context, uri)?.use { stream ->
+            openInputStream(context, pathOrUri)?.use { stream ->
                 val exif = ExifInterface(stream)
                 when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
                     ExifInterface.ORIENTATION_ROTATE_90 -> 90

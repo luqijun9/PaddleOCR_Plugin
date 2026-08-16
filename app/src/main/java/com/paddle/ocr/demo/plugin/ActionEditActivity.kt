@@ -160,11 +160,26 @@ fun ActionEditScreen(
     var targetText by remember { mutableStateOf(initialTargetText) }
     var isRegex by remember { mutableStateOf(initialIsRegex) }
 
-    // 文件选择器 Launcher
+    // 系统文件管理器 (DocumentsUI) 选择器 Launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { imagePath = it.toString() }
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri: Uri? = result.data?.data
+            if (uri != null) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.w("OcrPlugin", "takePersistableUriPermission notice: ${e.message}")
+                }
+                // 转换为真实物理路径 (如 /storage/emulated/0/Pictures/xxx.jpg)
+                val realPath = UriPathUtils.getRealPathFromUri(context, uri)
+                imagePath = realPath
+            }
+        }
     }
 
     // 返回键默认自动保存
@@ -341,11 +356,18 @@ fun ActionEditScreen(
                         )
 
                         FilledTonalButton(
-                            onClick = { filePickerLauncher.launch("image/*") },
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                    addCategory(Intent.CATEGORY_OPENABLE)
+                                    type = "*/*"
+                                    putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*"))
+                                }
+                                filePickerLauncher.launch(intent)
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("浏览选取本地图片文件")
+                            Text("浏览选取本地图片文件 (文件管理器)")
                         }
                     }
                 }
