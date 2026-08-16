@@ -1,4 +1,4 @@
-name: Build & Release APK
+name: Build & Release Multi-Model APKs
 
 on:
   push:
@@ -10,8 +10,13 @@ on:
 
 jobs:
   build:
-    name: Build Signed APK
+    name: Build (${{ matrix.model }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [v6small, v6tiny]
 
     steps:
       - name: Checkout Code
@@ -26,6 +31,15 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download Model Weights (${{ matrix.model }})
+        run: |
+          python scripts/download_models.py --model ${{ matrix.model }} --force
+
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 
@@ -37,7 +51,7 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > key.keystore
           echo "Keystore decoded successfully"
 
-      - name: Build Release APK
+      - name: Build Release APKs
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -45,17 +59,39 @@ jobs:
           SIGNING_KEY_PATH: key.keystore
         run: ./gradlew assembleRelease
 
-      - name: Upload Release APK Artifact
+      - name: Rename APKs with Model and ABI
+        run: |
+          mkdir -p release-apks
+          cd app/build/outputs/apk/release
+          for apk in *.apk; do
+            if [ -f "$apk" ]; then
+              abi=""
+              if [[ "$apk" == *"arm64-v8a"* ]]; then
+                abi="arm64-v8a"
+              elif [[ "$apk" == *"armeabi-v7a"* ]]; then
+                abi="armeabi-v7a"
+              elif [[ "$apk" == *"universal"* ]]; then
+                abi="universal"
+              else
+                abi="all"
+              fi
+              new_name="PaddleOCR-Plugin-${{ matrix.model }}-${abi}-release.apk"
+              cp "$apk" "../../../../../release-apks/$new_name"
+              echo "Prepared $new_name"
+            fi
+          done
+
+      - name: Upload Artifacts (${{ matrix.model }})
         uses: actions/upload-artifact@v4
         with:
-          name: PaddleOCR-Plugin-Release
-          path: app/build/outputs/apk/release/*.apk
+          name: PaddleOCR-${{ matrix.model }}-APKs
+          path: release-apks/*.apk
 
-      - name: Create GitHub Release (On Tag)
+      - name: Publish to GitHub Release (On Tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/*.apk
+          files: release-apks/*.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -18,9 +18,14 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+    }
 
-        ndk {
-            abiFilters.add("arm64-v8a")
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = true
         }
     }
 
@@ -90,7 +95,9 @@ tasks.register("copyApkAndRecordTime") {
         val apkDir = layout.buildDirectory.dir("outputs/apk/debug").get().asFile
         val apkFiles = apkDir.listFiles { _, name -> name.endsWith(".apk") }
         if (!apkFiles.isNullOrEmpty()) {
-            val srcApk = apkFiles.first()
+            val srcApk = apkFiles.find { it.name.contains("arm64-v8a") }
+                ?: apkFiles.find { it.name.contains("universal") }
+                ?: apkFiles.first()
             val destApk = rootProject.file("app-debug.apk")
             srcApk.copyTo(destApk, overwrite = true)
             println("Copied ${srcApk.name} -> ${destApk.name}")
