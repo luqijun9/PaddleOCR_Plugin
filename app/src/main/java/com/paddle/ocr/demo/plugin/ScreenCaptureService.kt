@@ -129,8 +129,24 @@ class ScreenCaptureService : Service() {
         )
         log("virtualDisplay created: ${virtualDisplay != null}")
 
+        val timeoutHandler = Handler(Looper.getMainLooper())
+        val timeoutRunnable = Runnable {
+            log("SCREEN CAPTURE TIMEOUT (5s) - no image frame received")
+            imageReader?.setOnImageAvailableListener(null, null)
+            virtualDisplay?.release()
+            mediaProjection?.stop()
+            val errBundle = Bundle().apply {
+                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "截屏超时：5秒内未能获取屏幕图像帧")
+            }
+            signalTaskerFinish(pendingIntent, false, errBundle)
+            stopSelf()
+        }
+        timeoutHandler.postDelayed(timeoutRunnable, 5000)
+
         imageReader?.setOnImageAvailableListener({ reader ->
             log("=== onImageAvailable ===")
+            timeoutHandler.removeCallbacks(timeoutRunnable)
+
             val image: Image? = try {
                 reader.acquireLatestImage()
             } catch (e: Exception) {
@@ -173,7 +189,10 @@ class ScreenCaptureService : Service() {
             } else {
                 log("IMAGE IS NULL - screen capture failed!")
                 scope.launch {
-                    signalTaskerFinish(pendingIntent, false, Bundle())
+                    val errBundle = Bundle().apply {
+                        putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "截屏失败：未能获取屏幕图像")
+                    }
+                    signalTaskerFinish(pendingIntent, false, errBundle)
                     stopSelf()
                 }
             }
@@ -186,7 +205,12 @@ class ScreenCaptureService : Service() {
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
             log("OCR ENGINE IS NULL - not initialized!")
-            if (!isAppTest) signalTaskerFinish(pendingIntent, false, Bundle())
+            if (!isAppTest) {
+                val errBundle = Bundle().apply {
+                    putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "OCR引擎未初始化")
+                }
+                signalTaskerFinish(pendingIntent, false, errBundle)
+            }
             return
         }
         log("OCR engine available")
@@ -265,10 +289,15 @@ class ScreenCaptureService : Service() {
                 signalTaskerFinish(pendingIntent, true, bundle)
             }
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             log("OCR EXCEPTION: ${e.message}")
             Log.e(TAG, "[$SUB_TAG] OCR processing failed", e)
-            if (!isAppTest) signalTaskerFinish(pendingIntent, false, Bundle())
+            if (!isAppTest) {
+                val errBundle = Bundle().apply {
+                    putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "OCR识别异常: ${e.message ?: "未知错误"}")
+                }
+                signalTaskerFinish(pendingIntent, false, errBundle)
+            }
         }
     }
 

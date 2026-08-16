@@ -71,7 +71,7 @@ class ScreenCaptureActivity : Activity() {
             } else {
                 log("SCREEN CAPTURE PERMISSION DENIED")
                 log("resultCode=$resultCode, data=${data != null}")
-                signalTaskerFinish(false)
+                signalTaskerFinish(false, "用户取消或拒绝了录屏授权")
             }
         }
         log("finishing activity")
@@ -83,7 +83,7 @@ class ScreenCaptureActivity : Activity() {
         log("=== onDestroy ===")
     }
 
-    private fun signalTaskerFinish(success: Boolean) {
+    private fun signalTaskerFinish(success: Boolean, errorMessage: String? = null) {
         log("=== signalTaskerFinish (Activity) ===")
         if (pendingIntent == null) {
             log("pendingIntent is null, cannot signal!")
@@ -91,9 +91,15 @@ class ScreenCaptureActivity : Activity() {
         }
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
-        log("sending pendingIntent with resultCode=$resultCode")
+        val varsBundle = Bundle().apply {
+            if (!success && !errorMessage.isNullOrEmpty()) {
+                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errorMessage)
+            }
+        }
+        log("sending pendingIntent with resultCode=$resultCode, vars=${varsBundle.keySet()}")
         val resultIntent = Intent().apply {
             putExtra(PluginResultsService.EXTRA_RESULT_CODE, resultCode)
+            putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, varsBundle)
         }
         try {
             pendingIntent!!.send(this, 0, resultIntent)

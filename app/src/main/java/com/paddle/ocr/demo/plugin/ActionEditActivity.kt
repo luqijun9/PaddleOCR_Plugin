@@ -89,12 +89,15 @@ class ActionEditActivity : Activity() {
             "%ocr_json\nJSON格式结果\n包含每个文本块坐标的JSON数组",
             "%match_found\n是否找到目标文本\ntrue 或 false",
             "%match_center_x\n目标X坐标\n匹配文本的中心点X轴坐标",
-            "%match_center_y\n目标Y坐标\n匹配文本的中心点Y轴坐标"
+            "%match_center_y\n目标Y坐标\n匹配文本的中心点Y轴坐标",
+            "%errmsg\n错误信息\n执行失败或异常时的错误描述"
         )
         TaskerPlugin.addRelevantVariableList(resultIntent, variables)
 
-        // Tell Tasker to replace variables in our Target Text before sending it to us
-        TaskerPlugin.Setting.setVariableReplaceKeys(resultBundle, arrayOf(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT))
+        // Tell Tasker to replace variables in our Target Text before sending it to us (if supported)
+        if (TaskerPlugin.Setting.hostSupportsOnFireVariableReplacement(this)) {
+            TaskerPlugin.Setting.setVariableReplaceKeys(resultBundle, arrayOf(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT))
+        }
 
         // 请求宿主等待较长时间（120秒），因为需要用户点击授权对话框 + OCR 识别
         // TaskerPlugin API 要求单位是毫秒
