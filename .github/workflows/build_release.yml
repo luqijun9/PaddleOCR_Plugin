@@ -61,7 +61,8 @@ jobs:
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           SIGNING_KEY_PATH: key.keystore
-        run: ./gradlew assembleRelease -PsplitApks=true
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
+        run: ./gradlew assembleRelease -PsplitApks=true --stacktrace --no-daemon
 
       - name: Rename APKs with Model and ABI
         run: |
