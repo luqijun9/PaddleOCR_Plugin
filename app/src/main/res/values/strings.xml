@@ -64,14 +64,14 @@
 
     <!-- Main Introduction Screen -->
     <string name="intro_title">PP-OCR Plugin</string>
-    <string name="intro_subtitle">High-speed offline OCR text recognition plugin designed for MacroDroid, Tasker, and automated workflows.</string>
+    <string name="intro_subtitle">Offline OCR text recognition plugin designed for MacroDroid, Tasker, and automated workflows.</string>
     <string name="intro_section_features">Key Capabilities</string>
-    <string name="feature_offline_title">⚡ 100% Offline &amp; Instant</string>
-    <string name="feature_offline_desc">Built-in PP-OCRv6 ONNX engine with ~100-300ms inference latency. All processing happens entirely on device with zero data upload.</string>
+    <string name="feature_offline_title">⚡ 100% Offline &amp; Local Inference</string>
+    <string name="feature_offline_desc">Built-in PP-OCRv6 ONNX engine. All processing happens entirely on-device with zero data upload for complete privacy.</string>
     <string name="feature_modes_title">🎯 3 Image Input Modes</string>
     <string name="feature_modes_desc">• Accessibility: Android 11+ silent screenshot with zero popups\n• Screen Capture: MediaProjection standard screen capture\n• Local Image: Direct file path or Content URI decoding</string>
-    <string name="feature_keepalive_title">🛡️ Keep-Alive &amp; Low Latency</string>
-    <string name="feature_keepalive_desc">Foreground notification service keeps the OCR model warm in memory for zero cold-start delay.</string>
+    <string name="feature_keepalive_title">🛡️ Persistent Keep-Alive</string>
+    <string name="feature_keepalive_desc">Foreground notification service keeps the OCR model in memory, avoiding repeated model loading.</string>
     <string name="intro_section_usage">Quick Setup Guide</string>
     <string name="usage_step1">1. In MacroDroid or Tasker, add an Action and choose \"Tasker / Locale Plugin\" -> \"PP-OCR Plugin\".</string>
     <string name="usage_step2">2. In the plugin configuration page, choose your desired image mode (Accessibility / Local Image / Screen Capture) and enter optional keyword/regex.</string>

@@ -64,14 +64,14 @@
 
     <!-- Main Introduction Screen -->
     <string name="intro_title">PP-OCR 自动化插件</string>
-    <string name="intro_subtitle">专为 MacroDroid、Tasker 等自动化工具设计的离线极速 OCR 文字识别插件。</string>
+    <string name="intro_subtitle">专为 MacroDroid、Tasker 等自动化工具设计的离线 OCR 文字识别插件。</string>
     <string name="intro_section_features">核心特性</string>
-    <string name="feature_offline_title">⚡ 完全离线 · 极速毫秒级识别</string>
-    <string name="feature_offline_desc">搭载 PP-OCRv6 ONNX 本地推理引擎，单次识别耗时约 100~300ms，数据纯本地处理、零网络上传。</string>
+    <string name="feature_offline_title">⚡ 完全离线 · 本地引擎推理</string>
+    <string name="feature_offline_desc">搭载 PP-OCRv6 ONNX 本地推理引擎，数据纯本地处理、零网络上传，保障隐私安全。</string>
     <string name="feature_modes_title">🎯 三种图像输入源自由选择</string>
-    <string name="feature_modes_desc">• 无障碍截屏：Android 11+ 原生免弹窗后台极速静默截屏\n• 屏幕截图：MediaProjection 录屏截屏，全机型通用兼容\n• 本地图片：直接读取文件绝对路径或相册 Content URI</string>
-    <string name="feature_keepalive_title">🛡️ 常驻前台保活 · 零冷启动延迟</string>
-    <string name="feature_keepalive_desc">自启常驻通知服务，确保 OCR 模型长期驻留内存，宏触发时实现 0ms 秒开。</string>
+    <string name="feature_modes_desc">• 无障碍截屏：Android 11+ 原生免弹窗后台静默截屏\n• 屏幕截图：MediaProjection 录屏截屏，全机型通用兼容\n• 本地图片：直接读取文件绝对路径或相册 Content URI</string>
+    <string name="feature_keepalive_title">🛡️ 常驻前台保活 · 模型常驻内存</string>
+    <string name="feature_keepalive_desc">自启常驻通知服务，确保 OCR 模型长期驻留内存，宏触发时无需重新加载模型。</string>
     <string name="intro_section_usage">快速使用指南</string>
     <string name="usage_step1">1. 在 MacroDroid 或 Tasker 中添加动作，选择【Tasker/Locale 插件】->【PP-OCR 插件】。</string>
     <string name="usage_step2">2. 进入插件配置页，选择图像模式（无障碍截屏/本地图片/屏幕截图），并填入目标关键字或正则表达式。</string>
