@@ -151,6 +151,92 @@ class OcrActionReceiver : BroadcastReceiver() {
             return
         }
 
+        // 6. 无障碍静默截屏模式
+        if (imageSource == TaskerPluginConstants.IMAGE_SOURCE_ACCESSIBILITY) {
+            log("--- Routing to ACCESSIBILITY mode (goAsync + Coroutine) ---")
+            val startTime = System.currentTimeMillis()
+            PluginStatusManager.notifyRunning("正在无障碍静默截屏...")
+
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+                val errMsg = "无障碍静默截屏需要 Android 11 (API 30) 及以上系统支持"
+                PluginStatusManager.notifyFailed(errMsg)
+                val errBundle = Bundle().apply {
+                    putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errMsg)
+                }
+                TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)
+                return
+            }
+
+            if (!OcrAccessibilityService.isServiceRunning()) {
+                val errMsg = "无障碍服务未开启，请先在系统设置中启用 PP-OCR 无障碍服务"
+                PluginStatusManager.notifyFailed(errMsg)
+                val errBundle = Bundle().apply {
+                    putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errMsg)
+                }
+                TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)
+                return
+            }
+
+            val pendingResult = goAsync()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    val screenshotResult = OcrAccessibilityService.takeScreenshotSuspend(context)
+                    val result = if (screenshotResult.isSuccess) {
+                        val bitmap = screenshotResult.getOrThrow()
+                        val res = OcrResultProcessor.process(bitmap, targetText, isRegex)
+                        try {
+                            if (!bitmap.isRecycled) bitmap.recycle()
+                        } catch (ignore: Exception) {}
+                        res
+                    } else {
+                        val err = screenshotResult.exceptionOrNull()?.message ?: "无障碍截屏未知失败"
+                        OcrProcessResult(success = false, errorMessage = err)
+                    }
+
+                    val durationMs = System.currentTimeMillis() - startTime
+                    if (result.success) {
+                        val detail = if (result.matchFound) "找到目标 [$targetText]" else "全屏识别完成"
+                        PluginStatusManager.notifySuccess(durationMs, detail)
+                    } else {
+                        PluginStatusManager.notifyFailed(result.errorMessage ?: "未知错误")
+                    }
+
+                    val finalResultCode = if (result.success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
+                    val varsBundle = result.toTaskerBundle()
+
+                    // 1. 直接通过 signalFinish 发送完成广播给 Tasker / MacroDroid
+                    val signaled = TaskerPlugin.Setting.signalFinish(context, intent, finalResultCode, varsBundle)
+                    log("Accessibility mode signalFinish directly returned: $signaled")
+
+                    // 2. 兜底尝试 pendingIntent
+                    try {
+                        val resultIntent = Intent().apply {
+                            putExtra(PluginResultsService.EXTRA_RESULT_CODE, finalResultCode)
+                            putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, varsBundle)
+                        }
+                        pendingIntent.send(context, 0, resultIntent)
+                    } catch (e: Exception) {
+                        log("pendingIntent fallback send notice: ${e.message}")
+                    }
+
+                    log("Accessibility mode OCR finished. Success=${result.success}, matchFound=${result.matchFound}")
+                } catch (e: Throwable) {
+                    log("Accessibility mode OCR exception: ${e.message}")
+                    val errMsg = "无障碍识别异常: ${e.message ?: "未知错误"}"
+                    PluginStatusManager.notifyFailed(errMsg)
+                    val errBundle = Bundle().apply {
+                        putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errMsg)
+                    }
+                    try {
+                        TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)
+                    } catch (ignore: Exception) {}
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
+
         // 7. 屏幕截图模式：启动 ScreenCaptureActivity
         log("--- starting ScreenCaptureActivity for SCREEN_CAPTURE mode ---")
         val captureIntent = Intent(context, ScreenCaptureActivity::class.java).apply {

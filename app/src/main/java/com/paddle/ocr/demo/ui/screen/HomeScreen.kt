@@ -55,6 +55,7 @@ fun HomeScreen(viewModel: OCRViewModel = viewModel()) {
             is OCRViewModel.UIState.Ready -> {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Spacer(modifier = Modifier.height(16.dp))
+                    AccessibilityPermissionBanner(context)
                     OverlayPermissionBanner(context)
                     NotificationPermissionBanner(context)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -110,6 +111,65 @@ fun HomeScreen(viewModel: OCRViewModel = viewModel()) {
                     onRetry = { viewModel.retry() },
                     onDismiss = { viewModel.retry() },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun AccessibilityPermissionBanner(context: Context) {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return
+
+    var isRunning by remember { mutableStateOf(com.paddle.ocr.demo.plugin.OcrAccessibilityService.isServiceRunning()) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isRunning = com.paddle.ocr.demo.plugin.OcrAccessibilityService.isServiceRunning()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (!isRunning) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "⚡ 推荐启用无障碍静默截屏",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "开启“PP-OCR 无障碍截屏服务”后，宏触发截屏完全免录屏弹窗确认，实现后台全静默极速识别。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            val intent = Intent(Settings.ACTION_SETTINGS)
+                            context.startActivity(intent)
+                        }
+                    }
+                ) {
+                    Text("前往开启无障碍服务")
+                }
             }
         }
     }

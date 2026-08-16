@@ -21,4 +21,5 @@ object TaskerPluginConstants {
     // Image source options
     const val IMAGE_SOURCE_SCREEN_CAPTURE = "screen_capture"
     const val IMAGE_SOURCE_FILE_PATH = "file_path"
+    const val IMAGE_SOURCE_ACCESSIBILITY = "accessibility"
 }

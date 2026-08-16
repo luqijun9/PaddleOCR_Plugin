@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PP-OCRv6 Demo</string>
+    <string name="accessibility_service_label">PP-OCR 无障碍截屏服务</string>
+    <string name="accessibility_service_description">用于 PP-OCR 插件在后台实现免弹窗静默截屏并自动识别屏幕文字。</string>
 </resources>

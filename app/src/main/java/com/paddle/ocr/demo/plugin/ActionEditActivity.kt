@@ -287,16 +287,29 @@ fun ActionEditScreen(
                         SegmentedButton(
                             selected = imageSource == TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE,
                             onClick = { imageSource = TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
                         ) {
                             Text("屏幕截图")
                         }
                         SegmentedButton(
                             selected = imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH,
                             onClick = { imageSource = TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
                         ) {
                             Text("本地图片")
+                        }
+                        val isAndroid11OrAbove = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R
+                        SegmentedButton(
+                            selected = imageSource == TaskerPluginConstants.IMAGE_SOURCE_ACCESSIBILITY,
+                            onClick = {
+                                if (isAndroid11OrAbove) {
+                                    imageSource = TaskerPluginConstants.IMAGE_SOURCE_ACCESSIBILITY
+                                }
+                            },
+                            enabled = isAndroid11OrAbove,
+                            shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
+                        ) {
+                            Text(if (isAndroid11OrAbove) "无障碍截屏" else "无障碍(需11+)")
                         }
                     }
                 }
@@ -381,6 +394,11 @@ fun ActionEditScreen(
                         }
                     }
                 }
+            }
+
+            // 无障碍权限检测卡片 (仅无障碍模式显示)
+            if (imageSource == TaskerPluginConstants.IMAGE_SOURCE_ACCESSIBILITY) {
+                AccessibilityPermissionCheckCard(context)
             }
 
             // 存储权限检测卡片 (仅本地文件模式显示)
@@ -770,6 +788,73 @@ fun NotificationPermissionCheckCard(context: Context) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("一键开启通知权限")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AccessibilityPermissionCheckCard(context: Context) {
+    var isRunning by remember { mutableStateOf(OcrAccessibilityService.isServiceRunning()) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isRunning = OcrAccessibilityService.isServiceRunning()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (!isRunning) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "未启用无障碍截屏服务",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+                Text(
+                    text = "无障碍静默截屏需要启用“PP-OCR 无障碍截屏服务”，开启后宏触发时无需录屏确认弹窗，实现全静默截屏。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            val intent = Intent(Settings.ACTION_SETTINGS)
+                            context.startActivity(intent)
+                        }
+                    },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("一键前往开启无障碍服务")
                 }
             }
         }
