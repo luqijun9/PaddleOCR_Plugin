@@ -360,6 +360,17 @@ fun ActionEditScreen(
                                 val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                                     addCategory(Intent.CATEGORY_OPENABLE)
                                     type = "*/*"
+                                    putExtra(
+                                        Intent.EXTRA_MIME_TYPES,
+                                        arrayOf(
+                                            "image/jpeg",
+                                            "image/png",
+                                            "image/webp",
+                                            "image/bmp",
+                                            "image/gif",
+                                            "image/*"
+                                        )
+                                    )
                                 }
                                 filePickerLauncher.launch(intent)
                             },
