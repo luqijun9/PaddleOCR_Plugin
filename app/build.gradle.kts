@@ -18,14 +18,25 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+
+        val isSplit = project.hasProperty("splitApks") || System.getenv("SPLIT_APKS") == "true"
+        if (!isSplit) {
+            val targetAbi = project.findProperty("targetAbi")?.toString() ?: "arm64-v8a"
+            ndk {
+                abiFilters.add(targetAbi)
+            }
+        }
     }
 
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a")
-            isUniversalApk = true
+    val isSplit = project.hasProperty("splitApks") || System.getenv("SPLIT_APKS") == "true"
+    if (isSplit) {
+        splits {
+            abi {
+                isEnable = true
+                reset()
+                include("arm64-v8a", "armeabi-v7a")
+                isUniversalApk = true
+            }
         }
     }
 
