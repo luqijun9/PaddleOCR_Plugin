@@ -54,6 +54,7 @@ class OCRApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        com.paddle.ocr.demo.plugin.PluginStatusManager.init(this)
         loadModels()
     }
 

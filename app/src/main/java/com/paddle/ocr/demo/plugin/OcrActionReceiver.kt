@@ -84,6 +84,8 @@ class OcrActionReceiver : BroadcastReceiver() {
         // 6. 根据模式分流执行
         if (imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH) {
             log("--- Routing to FILE_PATH mode (goAsync + Coroutine) ---")
+            val startTime = System.currentTimeMillis()
+            PluginStatusManager.notifyRunning("正在识别本地图片...")
             val pendingResult = goAsync()
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 try {
@@ -97,6 +99,14 @@ class OcrActionReceiver : BroadcastReceiver() {
                                 errorMessage = loadResult.errorMessage
                             )
                         }
+                    }
+
+                    val durationMs = System.currentTimeMillis() - startTime
+                    if (result.success) {
+                        val detail = if (result.matchFound) "找到目标 [$targetText]" else "文件识别完成"
+                        PluginStatusManager.notifySuccess(durationMs, detail)
+                    } else {
+                        PluginStatusManager.notifyFailed(result.errorMessage ?: "未知错误")
                     }
 
                     val finalResultCode = if (result.success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
@@ -120,8 +130,10 @@ class OcrActionReceiver : BroadcastReceiver() {
                     log("File mode OCR finished. Success=${result.success}, matchFound=${result.matchFound}")
                 } catch (e: Throwable) {
                     log("File mode OCR exception: ${e.message}")
+                    val errMsg = "图片识别异常: ${e.message ?: "未知错误"}"
+                    PluginStatusManager.notifyFailed(errMsg)
                     val errBundle = Bundle().apply {
-                        putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "图片识别异常: ${e.message ?: "未知错误"}")
+                        putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errMsg)
                     }
                     try {
                         TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)

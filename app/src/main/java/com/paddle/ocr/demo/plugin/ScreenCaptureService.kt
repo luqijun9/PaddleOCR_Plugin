@@ -58,9 +58,12 @@ class ScreenCaptureService : Service() {
     }
 
     @SuppressLint("WrongConstant")
+    private var captureStartTime: Long = 0
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log("=== onStartCommand ===")
-        log("intent=$intent, flags=$flags, startId=$startId")
+        captureStartTime = System.currentTimeMillis()
+        PluginStatusManager.notifyRunning("正在截屏并推理文字...")
         
         if (intent == null) {
             log("intent is NULL, stopping self")
@@ -188,6 +191,7 @@ class ScreenCaptureService : Service() {
                 }
             } else {
                 log("IMAGE IS NULL - screen capture failed!")
+                PluginStatusManager.notifyFailed("截屏失败：未能获取屏幕图像")
                 scope.launch {
                     val errBundle = Bundle().apply {
                         putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "截屏失败：未能获取屏幕图像")
@@ -204,6 +208,14 @@ class ScreenCaptureService : Service() {
         log("=== processOcr (via OcrResultProcessor) ===")
         val result = OcrResultProcessor.process(bitmap, targetText, isRegex)
         log("OcrResultProcessor returned success=${result.success}, matchFound=${result.matchFound}, error=${result.errorMessage}")
+
+        val durationMs = if (captureStartTime > 0) System.currentTimeMillis() - captureStartTime else 0
+        if (result.success) {
+            val detail = if (result.matchFound) "找到目标 [$targetText]" else "全屏识别完成"
+            PluginStatusManager.notifySuccess(durationMs, detail)
+        } else {
+            PluginStatusManager.notifyFailed(result.errorMessage ?: "未知错误")
+        }
 
         if (isAppTest) {
             log("isAppTest=true, emitting result for Demo app")
