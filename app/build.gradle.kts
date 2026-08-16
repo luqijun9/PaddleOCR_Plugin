@@ -1,3 +1,7 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -52,3 +56,26 @@ dependencies {
 
     debugImplementation(libs.compose.ui.tooling)
 }
+
+tasks.register("copyApkAndRecordTime") {
+    doLast {
+        val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val timeFile = rootProject.file("time.txt")
+        timeFile.writeText(now)
+        println("Updated time.txt: $now")
+
+        val apkDir = layout.buildDirectory.dir("outputs/apk/debug").get().asFile
+        val apkFiles = apkDir.listFiles { _, name -> name.endsWith(".apk") }
+        if (!apkFiles.isNullOrEmpty()) {
+            val srcApk = apkFiles.first()
+            val destApk = rootProject.file("app-debug.apk")
+            srcApk.copyTo(destApk, overwrite = true)
+            println("Copied ${srcApk.name} -> ${destApk.name}")
+        }
+    }
+}
+
+tasks.matching { it.name == "assembleDebug" }.configureEach {
+    finalizedBy("copyApkAndRecordTime")
+}
+
