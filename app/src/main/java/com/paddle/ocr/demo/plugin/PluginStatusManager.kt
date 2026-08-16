@@ -38,10 +38,10 @@ object PluginStatusManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                CHANNEL_NAME,
+                ctx.getString(R.string.notif_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "显示 OCR 插件保活状态与宏识别执行耗时"
+                description = ctx.getString(R.string.notif_channel_desc)
                 setShowBadge(false)
             }
             val manager = ctx.getSystemService(NotificationManager::class.java)
@@ -79,23 +79,35 @@ object PluginStatusManager {
      * 待命状态
      */
     fun notifyIdle() {
-        updateNotification("PP-OCR 插件运行中", "模型就绪，等待触发")
+        val ctx = appContext ?: return
+        updateNotification(
+            ctx.getString(R.string.notif_idle_title),
+            ctx.getString(R.string.notif_idle_desc)
+        )
     }
 
     /**
      * 识别进行中状态
      */
-    fun notifyRunning(modeInfo: String = "正在推理图像文字...") {
-        updateNotification("正在执行 OCR 识别...", modeInfo)
+    fun notifyRunning(modeInfo: String? = null) {
+        val ctx = appContext ?: return
+        val title = ctx.getString(R.string.notif_running_title)
+        val content = modeInfo ?: ctx.getString(R.string.notif_running_screen)
+        updateNotification(title, content)
     }
 
     /**
      * 识别成功状态 (例如: 耗时 230ms · 找到目标 [验证码])
      */
     fun notifySuccess(durationMs: Long, detail: String) {
+        val ctx = appContext ?: return
         val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-        val title = "OCR 识别完成 ($timeStr)"
-        val content = "耗时 ${durationMs}ms · $detail"
+        val title = ctx.getString(R.string.notif_success_title, timeStr)
+        val content = if (detail.isNotEmpty()) {
+            ctx.getString(R.string.notif_success_target, durationMs, detail)
+        } else {
+            ctx.getString(R.string.notif_success_all, durationMs)
+        }
         updateNotification(title, content)
     }
 
@@ -103,9 +115,10 @@ object PluginStatusManager {
      * 识别失败状态
      */
     fun notifyFailed(errorMessage: String) {
+        val ctx = appContext ?: return
         val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-        val title = "OCR 识别失败 ($timeStr)"
-        val content = errorMessage.ifEmpty { "未知异常" }
+        val title = ctx.getString(R.string.notif_failed_title, timeStr)
+        val content = errorMessage.ifEmpty { "Error" }
         updateNotification(title, content)
     }
 

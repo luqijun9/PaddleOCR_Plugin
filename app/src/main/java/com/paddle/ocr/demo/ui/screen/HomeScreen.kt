@@ -30,10 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.paddle.ocr.demo.R
 import com.paddle.ocr.demo.ui.component.*
 import com.paddle.ocr.demo.ui.viewmodel.OCRViewModel
 
@@ -145,14 +147,14 @@ fun AccessibilityPermissionBanner(context: Context) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "⚡ 推荐启用无障碍静默截屏",
+                    text = stringResource(R.string.perm_accessibility_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "开启“PP-OCR 无障碍截屏服务”后，宏触发截屏完全免录屏弹窗确认，实现后台全静默极速识别。",
+                    text = stringResource(R.string.perm_accessibility_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -168,7 +170,7 @@ fun AccessibilityPermissionBanner(context: Context) {
                         }
                     }
                 ) {
-                    Text("前往开启无障碍服务")
+                    Text(stringResource(R.string.perm_accessibility_btn))
                 }
             }
         }
@@ -216,14 +218,14 @@ fun NotificationPermissionBanner(context: Context) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "📢 建议开启通知权限",
+                    text = stringResource(R.string.perm_notification_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "开启通知权限后，插件可常驻通知栏实时显示就绪状态、OCR 识别耗时与匹配结果，同时提升系统后台存活优先级。",
+                    text = stringResource(R.string.perm_notification_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
@@ -233,7 +235,7 @@ fun NotificationPermissionBanner(context: Context) {
                         permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                     }
                 ) {
-                    Text("一键开启通知权限")
+                    Text(stringResource(R.string.perm_notification_btn))
                 }
             }
         }
@@ -266,14 +268,14 @@ fun OverlayPermissionBanner(context: Context) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "⚠️ 未开启后台弹出/悬浮窗权限",
+                    text = stringResource(R.string.perm_overlay_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "为了让 MacroDroid / Tasker 插件在后台能自动弹出录屏授权，请开启“显示在其他应用上层”（部分机型如小米/vivo还需在系统权限管理中开启“后台弹出界面”）。",
+                    text = stringResource(R.string.perm_overlay_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -287,7 +289,7 @@ fun OverlayPermissionBanner(context: Context) {
                         context.startActivity(intent)
                     }
                 ) {
-                    Text("一键前往授权")
+                    Text(stringResource(R.string.perm_overlay_btn))
                 }
             }
         }

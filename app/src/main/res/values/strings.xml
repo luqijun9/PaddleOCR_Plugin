@@ -1,6 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PP-OCRv6 Demo</string>
-    <string name="accessibility_service_label">PP-OCR 无障碍截屏服务</string>
-    <string name="accessibility_service_description">用于 PP-OCR 插件在后台实现免弹窗静默截屏并自动识别屏幕文字。</string>
+    <!-- App & Services -->
+    <string name="app_name">PP-OCRv6 Plugin</string>
+    <string name="plugin_action_label">OCR Text Recognition</string>
+    <string name="accessibility_service_label">PP-OCR Accessibility Service</string>
+    <string name="accessibility_service_description">Used by PP-OCR plugin to silently capture screens and recognize text in background without popups.</string>
+    <string name="fgs_special_use_desc">Keep OCR model in memory and display real-time recognition status notifications for Tasker and MacroDroid automation.</string>
+
+    <!-- Plugin Config UI (ActionEditActivity) -->
+    <string name="title_ocr_plugin_config">OCR Plugin Config</string>
+    <string name="btn_save">Save</string>
+    <string name="section_image_source">Image Source</string>
+    <string name="source_screen_capture">Screen Capture</string>
+    <string name="source_local_file">Local Image</string>
+    <string name="source_accessibility">Accessibility</string>
+    <string name="source_accessibility_req_11">Accessibility (11+)</string>
+    <string name="section_image_path">Image File Path</string>
+    <string name="label_image_path">Absolute Path or Uri</string>
+    <string name="placeholder_image_path">/sdcard/Pictures/xxx.jpg or %img_path</string>
+    <string name="supporting_image_path">Supports Tasker/MacroDroid variables (e.g. %photo_path or [lv=img])</string>
+    <string name="btn_browse_files">Browse Files (File Manager)</string>
+    <string name="section_target_text">Target Match Text (Optional)</string>
+    <string name="label_target_text">Target Text / Keyword</string>
+    <string name="placeholder_target_text">Leave empty for full screen text recognition</string>
+    <string name="switch_use_regex">Use Regular Expression</string>
+    <string name="desc_use_regex">Enable regex matching (e.g. \\d{4,6} for verification codes)</string>
+    <string name="section_output_variables">Output Variables</string>
+    <string name="var_desc_full_text">All recognized text concatenated</string>
+    <string name="var_desc_json">JSON array with text, confidence, startX/Y, endX/Y, centerX/Y, bounds</string>
+    <string name="var_desc_match_found">Whether target text was matched (true / false)</string>
+    <string name="var_desc_match_center_x">Matched text center X coordinate (pixels)</string>
+    <string name="var_desc_match_center_y">Matched text center Y coordinate (pixels)</string>
+    <string name="var_desc_errmsg">Error description on failure</string>
+    <string name="btn_clear">Clear</string>
+
+    <!-- Permission Check Cards -->
+    <string name="perm_storage_title">All Files Access Recommended</string>
+    <string name="perm_storage_desc">Granting \"All files access\" allows the plugin to directly read images from any directory (DCIM, Downloads, etc.) without sandbox restrictions.</string>
+    <string name="perm_storage_btn">Grant Storage Permission</string>
+    <string name="perm_overlay_title">Background Pop-up / Overlay Permission Required</string>
+    <string name="perm_overlay_desc">To allow the plugin to trigger screen recording authorization from the background, please enable \"Display over other apps\".</string>
+    <string name="perm_overlay_btn">Grant Overlay Permission</string>
+    <string name="perm_notification_title">Notification Permission Recommended</string>
+    <string name="perm_notification_desc">Enabling notifications allows the plugin to stay alive in background and show real-time OCR execution duration and status.</string>
+    <string name="perm_notification_btn">Grant Notification Permission</string>
+    <string name="perm_accessibility_title">Accessibility Service Not Enabled</string>
+    <string name="perm_accessibility_desc">Silent screenshot requires enabling \"PP-OCR Accessibility Service\" in Accessibility Settings for popup-free capturing.</string>
+    <string name="perm_accessibility_btn">Go to Accessibility Settings</string>
+
+    <!-- Notifications (PluginStatusManager) -->
+    <string name="notif_channel_name">OCR Plugin Status</string>
+    <string name="notif_channel_desc">Shows OCR plugin keep-alive status and recognition execution duration</string>
+    <string name="notif_idle_title">PP-OCR Plugin Running</string>
+    <string name="notif_idle_desc">Model ready, waiting for trigger</string>
+    <string name="notif_running_title">Executing OCR Recognition...</string>
+    <string name="notif_running_screen">Capturing screen and inferring text...</string>
+    <string name="notif_running_file">Recognizing local image...</string>
+    <string name="notif_running_accessibility">Capturing screen silently via accessibility...</string>
+    <string name="notif_success_title">OCR Completed (%s)</string>
+    <string name="notif_success_target">Duration %1$dms · Target found [%2$s]</string>
+    <string name="notif_success_all">Duration %1$dms · Recognition completed</string>
+    <string name="notif_failed_title">OCR Failed (%s)</string>
+
+    <!-- Main Screen & Demo UI -->
+    <string name="picker_title">Select Image to Recognize</string>
+    <string name="picker_gallery">Pick from Gallery</string>
+    <string name="picker_screenshot">Screenshot Test</string>
+    <string name="timing_detection">Detection: %dms</string>
+    <string name="timing_recognition">Recognition: %dms</string>
+    <string name="timing_total">Total: %dms</string>
+    <string name="btn_copy_all">Copy All Text</string>
 </resources>

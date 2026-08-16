@@ -29,12 +29,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.paddle.ocr.demo.R
 import com.paddle.ocr.demo.ui.theme.PPOCRTheme
 import java.util.UUID
 
@@ -192,7 +194,7 @@ fun ActionEditScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "OCR 识别配置",
+                        text = stringResource(R.string.title_ocr_plugin_config),
                         fontWeight = FontWeight.Bold,
                         fontSize = 19.sp
                     )
@@ -201,7 +203,7 @@ fun ActionEditScreen(
                     IconButton(onClick = onCancel) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "取消"
+                            contentDescription = stringResource(R.string.btn_clear)
                         )
                     }
                 },
@@ -209,7 +211,7 @@ fun ActionEditScreen(
                     IconButton(onClick = { onSave(imageSource, imagePath, targetText, isRegex) }) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "保存",
+                            contentDescription = stringResource(R.string.btn_save),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -236,7 +238,7 @@ fun ActionEditScreen(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("取消")
+                        Text(stringResource(R.string.btn_clear))
                     }
                     Button(
                         onClick = { onSave(imageSource, imagePath, targetText, isRegex) },
@@ -249,7 +251,7 @@ fun ActionEditScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("保存配置", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.btn_save), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -276,7 +278,7 @@ fun ActionEditScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "图像输入源",
+                        text = stringResource(R.string.section_image_source),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -289,14 +291,14 @@ fun ActionEditScreen(
                             onClick = { imageSource = TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
                         ) {
-                            Text("屏幕截图")
+                            Text(stringResource(R.string.source_screen_capture))
                         }
                         SegmentedButton(
                             selected = imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH,
                             onClick = { imageSource = TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
                         ) {
-                            Text("本地图片")
+                            Text(stringResource(R.string.source_local_file))
                         }
                         val isAndroid11OrAbove = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R
                         SegmentedButton(
@@ -309,7 +311,7 @@ fun ActionEditScreen(
                             enabled = isAndroid11OrAbove,
                             shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
                         ) {
-                            Text(if (isAndroid11OrAbove) "无障碍截屏" else "无障碍(需11+)")
+                            Text(if (isAndroid11OrAbove) stringResource(R.string.source_accessibility) else stringResource(R.string.source_accessibility_req_11))
                         }
                     }
                 }
@@ -339,7 +341,7 @@ fun ActionEditScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                             Text(
-                                text = "图片文件路径",
+                                text = stringResource(R.string.section_image_path),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -349,17 +351,17 @@ fun ActionEditScreen(
                             value = imagePath,
                             onValueChange = { imagePath = it },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text("文件绝对路径或 Uri") },
-                            placeholder = { Text("/sdcard/Pictures/xxx.jpg 或 %img_path") },
+                            label = { Text(stringResource(R.string.label_image_path)) },
+                            placeholder = { Text(stringResource(R.string.placeholder_image_path)) },
                             supportingText = {
-                                Text("支持 Tasker/MacroDroid 变量 (如 %photo_path 或 [lv=img])")
+                                Text(stringResource(R.string.supporting_image_path))
                             },
                             trailingIcon = {
                                 if (imagePath.isNotEmpty()) {
                                     IconButton(onClick = { imagePath = "" }) {
                                         Icon(
                                             imageVector = Icons.Default.Clear,
-                                            contentDescription = "清空"
+                                            contentDescription = stringResource(R.string.btn_clear)
                                         )
                                     }
                                 }
@@ -390,7 +392,7 @@ fun ActionEditScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("浏览选取本地图片文件 (文件管理器)")
+                            Text(stringResource(R.string.btn_browse_files))
                         }
                     }
                 }
@@ -437,7 +439,7 @@ fun ActionEditScreen(
                             modifier = Modifier.size(22.dp)
                         )
                         Text(
-                            text = "查找设置",
+                            text = stringResource(R.string.section_target_text),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -447,17 +449,17 @@ fun ActionEditScreen(
                         value = targetText,
                         onValueChange = { targetText = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("目标查找文本 (可选)") },
-                        placeholder = { Text("留空则提取图像内所有文字") },
+                        label = { Text(stringResource(R.string.label_target_text)) },
+                        placeholder = { Text(stringResource(R.string.placeholder_target_text)) },
                         supportingText = {
-                            Text("支持 Tasker/MacroDroid 变量 (如 %search 或 [clipboard])")
+                            Text(stringResource(R.string.desc_use_regex))
                         },
                         trailingIcon = {
                             if (targetText.isNotEmpty()) {
                                 IconButton(onClick = { targetText = "" }) {
                                     Icon(
                                         imageVector = Icons.Default.Clear,
-                                        contentDescription = "清空"
+                                        contentDescription = stringResource(R.string.btn_clear)
                                     )
                                 }
                             }
@@ -475,12 +477,12 @@ fun ActionEditScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "使用正则表达式",
+                                text = stringResource(R.string.switch_use_regex),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "开启后支持正则匹配（例如 \\d{4,6} 匹配验证码）",
+                                text = stringResource(R.string.desc_use_regex),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -516,18 +518,18 @@ fun ActionEditScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "输出变量说明",
+                            text = stringResource(R.string.section_output_variables),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    VariableRow(name = "%ocr_full_text", desc = "识别出的所有文本拼接")
-                    VariableRow(name = "%ocr_json", desc = "含 text, confidence, startX/Y, endX/Y, centerX/Y, bounds 的 JSON 数组")
-                    VariableRow(name = "%match_found", desc = "是否匹配到目标文字 (true / false)")
-                    VariableRow(name = "%match_center_x", desc = "匹配文字中心点 X 轴坐标 (像素)")
-                    VariableRow(name = "%match_center_y", desc = "匹配文字中心点 Y 轴坐标 (像素)")
-                    VariableRow(name = "%errmsg", desc = "失败或异常时的具体错误描述")
+                    VariableRow(name = "%ocr_full_text", desc = stringResource(R.string.var_desc_full_text))
+                    VariableRow(name = "%ocr_json", desc = stringResource(R.string.var_desc_json))
+                    VariableRow(name = "%match_found", desc = stringResource(R.string.var_desc_match_found))
+                    VariableRow(name = "%match_center_x", desc = stringResource(R.string.var_desc_match_center_x))
+                    VariableRow(name = "%match_center_y", desc = stringResource(R.string.var_desc_match_center_y))
+                    VariableRow(name = "%errmsg", desc = stringResource(R.string.var_desc_errmsg))
                 }
             }
         }
@@ -602,14 +604,14 @@ fun OverlayPermissionCheckCard(context: Context) {
                         tint = MaterialTheme.colorScheme.error
                     )
                     Text(
-                        text = "未开启后台弹出/悬浮窗权限",
+                        text = stringResource(R.string.perm_overlay_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
                 Text(
-                    text = "后台触发屏幕截屏需要“显示在其他应用上层”（部分机型如小米/vivo还需开启“后台弹出界面”）。",
+                    text = stringResource(R.string.perm_overlay_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -623,7 +625,7 @@ fun OverlayPermissionCheckCard(context: Context) {
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("一键前往开启权限")
+                    Text(stringResource(R.string.perm_overlay_btn))
                 }
             }
         }
@@ -678,14 +680,14 @@ fun StoragePermissionCheckCard(context: Context) {
                         tint = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                     Text(
-                        text = "建议授予所有文件访问权限",
+                        text = stringResource(R.string.perm_storage_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                 }
                 Text(
-                    text = "开启“所有文件访问权限”后，插件可直接读取相册、下载等任意路径的图片，避免跨目录访问受限。",
+                    text = stringResource(R.string.perm_storage_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
@@ -712,7 +714,7 @@ fun StoragePermissionCheckCard(context: Context) {
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("一键前往开启存储权限")
+                    Text(stringResource(R.string.perm_storage_btn))
                 }
             }
         }
@@ -770,14 +772,14 @@ fun NotificationPermissionCheckCard(context: Context) {
                         tint = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                     Text(
-                        text = "建议开启通知权限",
+                        text = stringResource(R.string.perm_notification_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                 }
                 Text(
-                    text = "开启通知权限后，插件可在通知栏常驻保活，并在宏触发时实时更新识别耗时与匹配结果。",
+                    text = stringResource(R.string.perm_notification_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
@@ -787,7 +789,7 @@ fun NotificationPermissionCheckCard(context: Context) {
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("一键开启通知权限")
+                    Text(stringResource(R.string.perm_notification_btn))
                 }
             }
         }
@@ -831,14 +833,14 @@ fun AccessibilityPermissionCheckCard(context: Context) {
                         tint = MaterialTheme.colorScheme.error
                     )
                     Text(
-                        text = "未启用无障碍截屏服务",
+                        text = stringResource(R.string.perm_accessibility_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
                 Text(
-                    text = "无障碍静默截屏需要启用“PP-OCR 无障碍截屏服务”，开启后宏触发时无需录屏确认弹窗，实现全静默截屏。",
+                    text = stringResource(R.string.perm_accessibility_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -854,7 +856,7 @@ fun AccessibilityPermissionCheckCard(context: Context) {
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("一键前往开启无障碍服务")
+                    Text(stringResource(R.string.perm_accessibility_btn))
                 }
             }
         }

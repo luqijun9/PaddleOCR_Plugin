@@ -37,7 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.paddle.ocr.demo.R
 
 @Composable
 fun ImagePicker(
@@ -55,14 +57,14 @@ fun ImagePicker(
     ) {
         Button(onClick = onGalleryClick) {
             Icon(Icons.Default.Add, contentDescription = null)
-            Text("  Select from Gallery", modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.picker_gallery), modifier = Modifier.padding(start = 8.dp))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(onClick = onScreenshotClick) {
             Icon(Icons.Default.Add, contentDescription = null)
-            Text("  Test Screen Capture OCR", modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.picker_screenshot), modifier = Modifier.padding(start = 8.dp))
         }
 
         if (sampleImages.isNotEmpty()) {

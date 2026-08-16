@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Services -->
+    <string name="app_name">PP-OCRv6 插件</string>
+    <string name="plugin_action_label">OCR文字识别</string>
+    <string name="accessibility_service_label">PP-OCR 无障碍截屏服务</string>
+    <string name="accessibility_service_description">用于 PP-OCR 插件在后台实现免弹窗静默截屏并自动识别屏幕文字。</string>
+    <string name="fgs_special_use_desc">保持 OCR 模型常驻内存并为 Tasker/MacroDroid 宏提供实时识别状态通知。</string>
+
+    <!-- Plugin Config UI (ActionEditActivity) -->
+    <string name="title_ocr_plugin_config">OCR 插件配置</string>
+    <string name="btn_save">保存</string>
+    <string name="section_image_source">图像获取方式</string>
+    <string name="source_screen_capture">屏幕截图</string>
+    <string name="source_local_file">本地图片</string>
+    <string name="source_accessibility">无障碍截屏</string>
+    <string name="source_accessibility_req_11">无障碍(需11+)</string>
+    <string name="section_image_path">图片文件路径</string>
+    <string name="label_image_path">文件绝对路径或 Uri</string>
+    <string name="placeholder_image_path">/sdcard/Pictures/xxx.jpg 或 %img_path</string>
+    <string name="supporting_image_path">支持 Tasker/MacroDroid 变量 (如 %photo_path 或 [lv=img])</string>
+    <string name="btn_browse_files">浏览选取本地图片文件 (文件管理器)</string>
+    <string name="section_target_text">目标匹配文本 (可选)</string>
+    <string name="label_target_text">目标文本 / 关键字</string>
+    <string name="placeholder_target_text">留空则全屏识别，不单独匹配关键字</string>
+    <string name="switch_use_regex">使用正则表达式</string>
+    <string name="desc_use_regex">开启后支持正则匹配（例如 \\d{4,6} 匹配验证码）</string>
+    <string name="section_output_variables">输出变量说明</string>
+    <string name="var_desc_full_text">识别出的所有文本拼接</string>
+    <string name="var_desc_json">含 text, confidence, startX/Y, endX/Y, centerX/Y, bounds 的 JSON 数组</string>
+    <string name="var_desc_match_found">是否匹配到目标文字 (true / false)</string>
+    <string name="var_desc_match_center_x">匹配文字中心点 X 轴坐标 (像素)</string>
+    <string name="var_desc_match_center_y">匹配文字中心点 Y 轴坐标 (像素)</string>
+    <string name="var_desc_errmsg">失败或异常时的具体错误描述</string>
+    <string name="btn_clear">清空</string>
+
+    <!-- Permission Check Cards -->
+    <string name="perm_storage_title">建议授予所有文件访问权限</string>
+    <string name="perm_storage_desc">开启“所有文件访问权限”后，插件可直接读取相册、下载等任意路径的图片，避免跨目录访问受限。</string>
+    <string name="perm_storage_btn">一键前往开启存储权限</string>
+    <string name="perm_overlay_title">未开启后台弹出/悬浮窗权限</string>
+    <string name="perm_overlay_desc">为了让 MacroDroid / Tasker 插件在后台能自动弹出录屏授权，请开启“显示在其他应用上层”（部分机型如小米/vivo还需开启“后台弹出界面”）。</string>
+    <string name="perm_overlay_btn">一键前往开启权限</string>
+    <string name="perm_notification_title">建议开启通知权限</string>
+    <string name="perm_notification_desc">开启通知权限后，插件可在通知栏常驻保活，并在宏触发时实时更新识别耗时与匹配结果。</string>
+    <string name="perm_notification_btn">一键开启通知权限</string>
+    <string name="perm_accessibility_title">未启用无障碍截屏服务</string>
+    <string name="perm_accessibility_desc">无障碍静默截屏需要启用“PP-OCR 无障碍截屏服务”，开启后宏触发时无需录屏确认弹窗，实现全静默截屏。</string>
+    <string name="perm_accessibility_btn">一键前往开启无障碍服务</string>
+
+    <!-- Notifications (PluginStatusManager) -->
+    <string name="notif_channel_name">OCR 插件运行状态</string>
+    <string name="notif_channel_desc">显示 OCR 插件保活状态与宏识别执行耗时</string>
+    <string name="notif_idle_title">PP-OCR 插件运行中</string>
+    <string name="notif_idle_desc">模型就绪，等待触发</string>
+    <string name="notif_running_title">正在执行 OCR 识别...</string>
+    <string name="notif_running_screen">正在截屏并推理文字...</string>
+    <string name="notif_running_file">正在识别本地图片...</string>
+    <string name="notif_running_accessibility">正在无障碍静默截屏...</string>
+    <string name="notif_success_title">OCR 识别完成 (%s)</string>
+    <string name="notif_success_target">耗时 %1$dms · 找到目标 [%2$s]</string>
+    <string name="notif_success_all">耗时 %1$dms · 识别完成</string>
+    <string name="notif_failed_title">OCR 识别失败 (%s)</string>
+
+    <!-- Main Screen & Demo UI -->
+    <string name="picker_title">选择要识别的图片</string>
+    <string name="picker_gallery">相册选取</string>
+    <string name="picker_screenshot">截屏测试</string>
+    <string name="timing_detection">检测: %dms</string>
+    <string name="timing_recognition">识别: %dms</string>
+    <string name="timing_total">总耗时: %dms</string>
+    <string name="btn_copy_all">复制全部文字</string>
+</resources>
