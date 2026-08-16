@@ -201,103 +201,18 @@ class ScreenCaptureService : Service() {
     }
 
     private suspend fun processOcr(bitmap: Bitmap, targetText: String, isRegex: Boolean, pendingIntent: android.app.PendingIntent?, isAppTest: Boolean) {
-        log("=== processOcr ===")
-        val ocrEngine = OCRApplication.instance.ocr
-        if (ocrEngine == null) {
-            log("OCR ENGINE IS NULL - not initialized!")
-            if (!isAppTest) {
-                val errBundle = Bundle().apply {
-                    putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "OCR引擎未初始化")
-                }
-                signalTaskerFinish(pendingIntent, false, errBundle)
+        log("=== processOcr (via OcrResultProcessor) ===")
+        val result = OcrResultProcessor.process(bitmap, targetText, isRegex)
+        log("OcrResultProcessor returned success=${result.success}, matchFound=${result.matchFound}, error=${result.errorMessage}")
+
+        if (isAppTest) {
+            log("isAppTest=true, emitting result for Demo app")
+            val ocrModelResult = OCRApplication.instance.ocr?.recognize(bitmap)
+            if (ocrModelResult != null) {
+                OCRApplication.instance.appTestResult.emit(Pair(bitmap, ocrModelResult))
             }
-            return
-        }
-        log("OCR engine available")
-
-        try {
-            log("calling ocrEngine.recognize()...")
-            val result = ocrEngine.recognize(bitmap)
-            log("recognize() returned. results count: ${result.results.size}")
-
-            if (result.results.isEmpty()) {
-                log("NO OCR RESULTS FOUND")
-            }
-
-            val fullTextBuilder = StringBuilder()
-            val jsonArray = JSONArray()
-            var matchFound = false
-            var matchCenterX = 0f
-            var matchCenterY = 0f
-
-            result.results.forEachIndexed { i, ocrResult ->
-                fullTextBuilder.append(ocrResult.text).append("\n")
-                log("  result[$i]: text='${ocrResult.text}' confidence=${ocrResult.confidence}")
-
-                val jsonObj = JSONObject()
-                jsonObj.put("text", ocrResult.text)
-                jsonObj.put("confidence", ocrResult.confidence)
-                val boxArr = JSONArray()
-                ocrResult.box.points.forEach { point ->
-                    val pointObj = JSONObject()
-                    pointObj.put("x", point.x)
-                    pointObj.put("y", point.y)
-                    boxArr.put(pointObj)
-                }
-                jsonObj.put("box", boxArr)
-                jsonArray.put(jsonObj)
-
-                // Check for target text
-                if (!matchFound && targetText.isNotEmpty()) {
-                    val isMatch = if (isRegex) {
-                        Regex(targetText).containsMatchIn(ocrResult.text)
-                    } else {
-                        ocrResult.text.contains(targetText)
-                    }
-                    if (isMatch) {
-                        log("MATCH FOUND in result[$i]!")
-                        matchFound = true
-                        val tl = ocrResult.box.points[0]
-                        val br = ocrResult.box.points[2]
-                        matchCenterX = (tl.x + br.x) / 2f
-                        matchCenterY = (tl.y + br.y) / 2f
-                        log("  centerX=$matchCenterX, centerY=$matchCenterY")
-                    }
-                }
-            }
-
-            val fullTextStr = fullTextBuilder.toString().trimEnd()
-            val jsonStr = jsonArray.toString()
-            log("fullText length=${fullTextStr.length}, json length=${jsonStr.length}, matchFound=$matchFound")
-
-            val bundle = Bundle().apply {
-                putString("%ocr_full_text", fullTextStr)
-                putString("%ocr_json", jsonStr)
-                putString("%match_found", matchFound.toString())
-                if (matchFound) {
-                    putString("%match_center_x", matchCenterX.toString())
-                    putString("%match_center_y", matchCenterY.toString())
-                }
-            }
-            log("varsBundle created with keys: ${bundle.keySet()}")
-
-            if (isAppTest) {
-                log("isAppTest=true, emitting result instead of signaling Tasker")
-                OCRApplication.instance.appTestResult.emit(Pair(bitmap, result))
-            } else {
-                log("calling signalTaskerFinish with success=true")
-                signalTaskerFinish(pendingIntent, true, bundle)
-            }
-
-        } catch (e: Throwable) {
-            log("OCR EXCEPTION: ${e.message}")
-            Log.e(TAG, "[$SUB_TAG] OCR processing failed", e)
-            if (!isAppTest) {
-                val errBundle = Bundle().apply {
-                    putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "OCR识别异常: ${e.message ?: "未知错误"}")
-                }
-                signalTaskerFinish(pendingIntent, false, errBundle)
-            }
+        } else {
+            signalTaskerFinish(pendingIntent, result.success, result.toTaskerBundle())
         }
     }
 

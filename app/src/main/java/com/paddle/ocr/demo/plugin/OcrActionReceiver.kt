@@ -3,7 +3,11 @@ package com.paddle.ocr.demo.plugin
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class OcrActionReceiver : BroadcastReceiver() {
     companion object {
@@ -52,6 +56,10 @@ class OcrActionReceiver : BroadcastReceiver() {
 
         val targetText = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT) ?: ""
         val isRegex = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX) ?: false
+        val imageSource = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_SOURCE) ?: TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE
+        val imagePath = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH) ?: ""
+
+        log("targetText='$targetText', isRegex=$isRegex, imageSource=$imageSource, imagePath='$imagePath'")
 
         // 4. 设置 RESULT_CODE_PENDING
         if (isOrderedBroadcast) {
@@ -73,8 +81,50 @@ class OcrActionReceiver : BroadcastReceiver() {
         }
         val pendingIntent = android.app.PendingIntent.getService(context, requestCode, resultsServiceIntent, pendingIntentFlags)
 
-        // 6. 启动 ScreenCaptureActivity
-        log("--- starting ScreenCaptureActivity ---")
+        // 6. 根据模式分流执行
+        if (imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH) {
+            log("--- Routing to FILE_PATH mode (goAsync + Coroutine) ---")
+            val pendingResult = goAsync()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    val bitmap = ImageFileLoader.loadBitmap(context, imagePath)
+                    val result = if (bitmap != null) {
+                        OcrResultProcessor.process(bitmap, targetText, isRegex)
+                    } else {
+                        OcrProcessResult(
+                            success = false,
+                            errorMessage = "无法加载或解码指定路径的图片: $imagePath"
+                        )
+                    }
+
+                    val finalResultCode = if (result.success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
+                    val resultIntent = Intent().apply {
+                        putExtra(PluginResultsService.EXTRA_RESULT_CODE, finalResultCode)
+                        putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, result.toTaskerBundle())
+                    }
+                    pendingIntent.send(context, 0, resultIntent)
+                    log("File mode OCR finished. Success=${result.success}, matchFound=${result.matchFound}")
+                } catch (e: Throwable) {
+                    log("File mode OCR exception: ${e.message}")
+                    val errBundle = Bundle().apply {
+                        putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "图片识别异常: ${e.message ?: "未知错误"}")
+                    }
+                    val errIntent = Intent().apply {
+                        putExtra(PluginResultsService.EXTRA_RESULT_CODE, TaskerPlugin.Setting.RESULT_CODE_FAILED)
+                        putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, errBundle)
+                    }
+                    try {
+                        pendingIntent.send(context, 0, errIntent)
+                    } catch (ignore: Exception) {}
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
+
+        // 7. 屏幕截图模式：启动 ScreenCaptureActivity
+        log("--- starting ScreenCaptureActivity for SCREEN_CAPTURE mode ---")
         val captureIntent = Intent(context, ScreenCaptureActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("targetText", targetText)

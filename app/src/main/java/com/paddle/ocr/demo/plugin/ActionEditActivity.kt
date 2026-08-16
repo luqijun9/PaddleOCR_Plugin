@@ -8,8 +8,11 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +40,8 @@ import java.util.UUID
 
 class ActionEditActivity : ComponentActivity() {
 
+    private var initialImageSource: String = TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE
+    private var initialImagePath: String = ""
     private var initialTargetText: String = ""
     private var initialIsRegex: Boolean = false
     private var instanceId: String = ""
@@ -49,6 +54,11 @@ class ActionEditActivity : ComponentActivity() {
         if (intent.action == TaskerPluginConstants.ACTION_EDIT_SETTING) {
             val bundle = intent.getBundleExtra(TaskerPluginConstants.EXTRA_BUNDLE)
             if (bundle != null) {
+                initialImageSource = bundle.getString(
+                    TaskerPluginConstants.BUNDLE_KEY_IMAGE_SOURCE,
+                    TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE
+                )
+                initialImagePath = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH, "")
                 initialTargetText = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, "")
                 initialIsRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
                 instanceId = bundle.getString("plugin_instance_id") ?: UUID.randomUUID().toString()
@@ -61,10 +71,12 @@ class ActionEditActivity : ComponentActivity() {
         setContent {
             PPOCRTheme {
                 ActionEditScreen(
+                    initialImageSource = initialImageSource,
+                    initialImagePath = initialImagePath,
                     initialTargetText = initialTargetText,
                     initialIsRegex = initialIsRegex,
-                    onSave = { targetText, isRegex ->
-                        saveAndFinish(targetText, isRegex)
+                    onSave = { imageSource, imagePath, targetText, isRegex ->
+                        saveAndFinish(imageSource, imagePath, targetText, isRegex)
                     },
                     onCancel = {
                         finish()
@@ -74,16 +86,31 @@ class ActionEditActivity : ComponentActivity() {
         }
     }
 
-    private fun saveAndFinish(targetText: String, isRegex: Boolean) {
+    private fun saveAndFinish(
+        imageSource: String,
+        imagePath: String,
+        targetText: String,
+        isRegex: Boolean
+    ) {
         val resultIntent = Intent()
         val resultBundle = Bundle().apply {
+            putString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_SOURCE, imageSource)
+            putString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH, imagePath)
             putString(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT, targetText)
             putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, isRegex)
             putString("plugin_instance_id", instanceId)
         }
 
         // 设置在 Tasker/MacroDroid 动作列表里显示的摘要 (Blurb)
-        val blurb = if (targetText.isEmpty()) "识别全屏文字" else "查找: $targetText"
+        val blurb = when (imageSource) {
+            TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH -> {
+                val fileName = imagePath.substringAfterLast('/').ifEmpty { "本地图片" }
+                if (targetText.isNotEmpty()) "文件[$fileName] 查找: $targetText" else "识别文件: $fileName"
+            }
+            else -> {
+                if (targetText.isNotEmpty()) "屏幕查找: $targetText" else "识别全屏文字"
+            }
+        }
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_STRING_BLURB, blurb)
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_BUNDLE, resultBundle)
 
@@ -100,7 +127,13 @@ class ActionEditActivity : ComponentActivity() {
 
         // 注册变量替换 (若宿主支持)
         if (TaskerPlugin.Setting.hostSupportsOnFireVariableReplacement(this)) {
-            TaskerPlugin.Setting.setVariableReplaceKeys(resultBundle, arrayOf(TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT))
+            TaskerPlugin.Setting.setVariableReplaceKeys(
+                resultBundle,
+                arrayOf(
+                    TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT,
+                    TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH
+                )
+            )
         }
 
         // 请求宿主等待较长时间 (120秒)
@@ -114,18 +147,29 @@ class ActionEditActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionEditScreen(
+    initialImageSource: String,
+    initialImagePath: String,
     initialTargetText: String,
     initialIsRegex: Boolean,
-    onSave: (String, Boolean) -> Unit,
+    onSave: (String, String, String, Boolean) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
+    var imageSource by remember { mutableStateOf(initialImageSource) }
+    var imagePath by remember { mutableStateOf(initialImagePath) }
     var targetText by remember { mutableStateOf(initialTargetText) }
     var isRegex by remember { mutableStateOf(initialIsRegex) }
 
+    // 文件选择器 Launcher
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { imagePath = it.toString() }
+    }
+
     // 返回键默认自动保存
     BackHandler {
-        onSave(targetText, isRegex)
+        onSave(imageSource, imagePath, targetText, isRegex)
     }
 
     Scaffold(
@@ -133,7 +177,7 @@ fun ActionEditScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "OCR 屏幕识别配置",
+                        text = "OCR 识别配置",
                         fontWeight = FontWeight.Bold,
                         fontSize = 19.sp
                     )
@@ -147,7 +191,7 @@ fun ActionEditScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onSave(targetText, isRegex) }) {
+                    IconButton(onClick = { onSave(imageSource, imagePath, targetText, isRegex) }) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "保存",
@@ -180,7 +224,7 @@ fun ActionEditScreen(
                         Text("取消")
                     }
                     Button(
-                        onClick = { onSave(targetText, isRegex) },
+                        onClick = { onSave(imageSource, imagePath, targetText, isRegex) },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -204,8 +248,113 @@ fun ActionEditScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 权限检测卡片
-            OverlayPermissionCheckCard(context)
+            // 模式选择卡片
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "图像输入源",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SegmentedButton(
+                            selected = imageSource == TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE,
+                            onClick = { imageSource = TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        ) {
+                            Text("屏幕截图")
+                        }
+                        SegmentedButton(
+                            selected = imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH,
+                            onClick = { imageSource = TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        ) {
+                            Text("本地图片")
+                        }
+                    }
+                }
+            }
+
+            // 本地图片路径卡片 (仅本地图片模式显示)
+            AnimatedVisibility(visible = imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH) {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = "图片文件路径",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = imagePath,
+                            onValueChange = { imagePath = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("文件绝对路径或 Uri") },
+                            placeholder = { Text("/sdcard/Pictures/xxx.jpg 或 %img_path") },
+                            supportingText = {
+                                Text("支持 Tasker/MacroDroid 变量 (如 %photo_path 或 [lv=img])")
+                            },
+                            trailingIcon = {
+                                if (imagePath.isNotEmpty()) {
+                                    IconButton(onClick = { imagePath = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Clear,
+                                            contentDescription = "清空"
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        FilledTonalButton(
+                            onClick = { filePickerLauncher.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("浏览选取本地图片文件")
+                        }
+                    }
+                }
+            }
+
+            // 悬浮窗权限检测卡片 (仅截屏模式显示)
+            if (imageSource == TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE) {
+                OverlayPermissionCheckCard(context)
+            }
 
             // 目标文本配置卡片
             ElevatedCard(
@@ -241,7 +390,7 @@ fun ActionEditScreen(
                         onValueChange = { targetText = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("目标查找文本 (可选)") },
-                        placeholder = { Text("留空则提取全屏所有文字") },
+                        placeholder = { Text("留空则提取图像内所有文字") },
                         supportingText = {
                             Text("支持 Tasker/MacroDroid 变量 (如 %search 或 [clipboard])")
                         },
@@ -315,7 +464,7 @@ fun ActionEditScreen(
                         )
                     }
 
-                    VariableRow(name = "%ocr_full_text", desc = "全屏识别出的所有文本拼接")
+                    VariableRow(name = "%ocr_full_text", desc = "识别出的所有文本拼接")
                     VariableRow(name = "%ocr_json", desc = "带文字框坐标与置信度的 JSON 数组")
                     VariableRow(name = "%match_found", desc = "是否匹配到目标文字 (true / false)")
                     VariableRow(name = "%match_center_x", desc = "匹配文字中心点 X 轴坐标 (像素)")
@@ -402,7 +551,7 @@ fun OverlayPermissionCheckCard(context: Context) {
                     )
                 }
                 Text(
-                    text = "后台触发自动截屏需要“显示在其他应用上层”（部分机型如小米/vivo还需开启“后台弹出界面”）。",
+                    text = "后台触发屏幕截屏需要“显示在其他应用上层”（部分机型如小米/vivo还需开启“后台弹出界面”）。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -422,4 +571,3 @@ fun OverlayPermissionCheckCard(context: Context) {
         }
     }
 }
-

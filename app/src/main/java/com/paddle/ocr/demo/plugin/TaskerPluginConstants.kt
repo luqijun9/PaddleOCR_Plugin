@@ -15,4 +15,10 @@ object TaskerPluginConstants {
     // Our custom bundle keys
     const val BUNDLE_KEY_TARGET_TEXT = "target_text"
     const val BUNDLE_KEY_IS_REGEX = "is_regex"
+    const val BUNDLE_KEY_IMAGE_SOURCE = "image_source"
+    const val BUNDLE_KEY_IMAGE_PATH = "image_path"
+
+    // Image source options
+    const val IMAGE_SOURCE_SCREEN_CAPTURE = "screen_capture"
+    const val IMAGE_SOURCE_FILE_PATH = "file_path"
 }
