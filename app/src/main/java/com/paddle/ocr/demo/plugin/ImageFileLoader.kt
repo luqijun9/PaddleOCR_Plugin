@@ -1,11 +1,13 @@
 package com.paddle.ocr.demo.plugin
 
+import android.content.ContentUris
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import android.provider.MediaStore
 import android.util.Log
 import java.io.File
 import java.io.InputStream
@@ -81,25 +83,71 @@ object ImageFileLoader {
 
     private fun openInputStream(context: Context, pathOrUri: String): InputStream? {
         val trimmed = pathOrUri.trim()
-        return try {
-            if (trimmed.startsWith("content://")) {
-                context.contentResolver.openInputStream(Uri.parse(trimmed))
-            } else {
-                val filePath = if (trimmed.startsWith("file://")) trimmed.substring(7) else trimmed
-                val file = File(filePath)
-                if (file.exists() && file.canRead()) {
-                    java.io.FileInputStream(file)
-                } else if (trimmed.startsWith("file://")) {
-                    context.contentResolver.openInputStream(Uri.parse(trimmed))
-                } else {
-                    // Try open as file fallback
-                    java.io.FileInputStream(file)
-                }
+
+        // 1. 如果是 content:// 协议
+        if (trimmed.startsWith("content://")) {
+            // A. 先尝试直接通过 ContentResolver 打开
+            try {
+                val directStream = context.contentResolver.openInputStream(Uri.parse(trimmed))
+                if (directStream != null) return directStream
+            } catch (e: Exception) {
+                Log.w(TAG, "[$SUB_TAG] Direct openInputStream failed for $trimmed: ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "[$SUB_TAG] openInputStream failed for $trimmed: ${e.message}")
-            null
+
+            // B. 若为 MediaDocumentsProvider (例如 .../image:1000051088 或 .../image%3A1000051088)
+            // 提取纯数字 ID，直接通过 MediaStore.Images.Media 获取
+            try {
+                val idMatch = Regex("""image(?::|%3A)(\d+)""").find(trimmed)
+                if (idMatch != null) {
+                    val id = idMatch.groupValues[1].toLong()
+                    val mediaStoreUri = ContentUris.withAppendedId(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        id
+                    )
+                    Log.d(TAG, "[$SUB_TAG] Trying MediaStore content uri: $mediaStoreUri for id=$id")
+                    val mediaStream = context.contentResolver.openInputStream(mediaStoreUri)
+                    if (mediaStream != null) return mediaStream
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "[$SUB_TAG] MediaStore id openInputStream failed: ${e.message}")
+            }
+
+            // C. 尝试重新编码 (将未编码冒号替换为 %3A 进行 DocumentsProvider 请求)
+            try {
+                val encodedUriStr = trimmed.replace("image:", "image%3A")
+                if (encodedUriStr != trimmed) {
+                    val reencodedStream = context.contentResolver.openInputStream(Uri.parse(encodedUriStr))
+                    if (reencodedStream != null) return reencodedStream
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "[$SUB_TAG] Re-encoded uri openInputStream failed: ${e.message}")
+            }
+
+            // D. 尝试通过 UriPathUtils 解析物理文件路径直接打开 FileInputStream
+            try {
+                val realPath = UriPathUtils.getRealPathFromUri(context, Uri.parse(trimmed))
+                if (realPath.isNotEmpty() && !realPath.startsWith("content://")) {
+                    val f = File(realPath)
+                    if (f.exists() && f.canRead()) {
+                        Log.d(TAG, "[$SUB_TAG] Successfully opened FileInputStream from resolved path: $realPath")
+                        return java.io.FileInputStream(f)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "[$SUB_TAG] UriPathUtils real path fallback failed: ${e.message}")
+            }
+
+            return null
         }
+
+        // 2. 如果是物理文件路径 (/storage/... 或 file://)
+        val filePath = if (trimmed.startsWith("file://")) trimmed.substring(7) else trimmed
+        val file = File(filePath)
+        if (file.exists() && file.canRead()) {
+            return java.io.FileInputStream(file)
+        }
+
+        return null
     }
 
     private fun calculateInSampleSize(width: Int, height: Int, maxDim: Int): Int {
