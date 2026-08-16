@@ -44,6 +44,7 @@ object UriPathUtils {
                 else if ("com.android.providers.media.documents" == uri.authority) {
                     val split = docId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                     val type = split[0]
+                    val id = if (split.size > 1) split[1] else docId
                     var contentUri: Uri? = null
                     if ("image" == type) {
                         contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
@@ -52,15 +53,30 @@ object UriPathUtils {
                     } else if ("audio" == type) {
                         contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
                     }
+
+                    // 尝试通过 _id 查询
                     val selection = "_id=?"
-                    val selectionArgs = arrayOf(split[1])
+                    val selectionArgs = arrayOf(id)
                     val path = getDataColumn(context, contentUri, selection, selectionArgs)
                     if (!path.isNullOrEmpty() && File(path).exists()) return path
+
+                    // 尝试通过 ContentUris 构建查询
+                    try {
+                        val itemUri = ContentUris.withAppendedId(
+                            contentUri ?: MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            id.toLong()
+                        )
+                        val itemPath = getDataColumn(context, itemUri, null, null)
+                        if (!itemPath.isNullOrEmpty() && File(itemPath).exists()) return itemPath
+                    } catch (e: Exception) {
+                        Log.w(TAG, "ContentUris query failed: ${e.message}")
+                    }
                 }
                 // DownloadsDocumentsProvider (下载目录)
                 else if ("com.android.providers.downloads.documents" == uri.authority) {
                     if (docId.startsWith("raw:")) {
-                        return docId.substring(4)
+                        val rawPath = docId.substring(4)
+                        if (File(rawPath).exists()) return rawPath
                     }
                     try {
                         val contentUri = ContentUris.withAppendedId(
@@ -83,8 +99,8 @@ object UriPathUtils {
             Log.w(TAG, "Failed to resolve real path from uri: $uri, error: ${e.message}")
         }
 
-        // 兜底返回 Uri 字符串
-        return uri.toString()
+        // 兜底返回已做 URL 解码的 Uri 字符串 (确保绝不含有 %3A 等被 Tasker 误判为变量的字符)
+        return Uri.decode(uri.toString())
     }
 
     private fun getDataColumn(
@@ -94,13 +110,41 @@ object UriPathUtils {
         selectionArgs: Array<String>?
     ): String? {
         if (uri == null) return null
-        val column = "_data"
-        val projection = arrayOf(column)
+        val projection = arrayOf(
+            MediaStore.MediaColumns.DATA,
+            MediaStore.MediaColumns.DISPLAY_NAME
+        )
         try {
             context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
-                    val columnIndex = cursor.getColumnIndexOrThrow(column)
-                    return cursor.getString(columnIndex)
+                    // 1. 尝试读取 _data
+                    val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+                    if (dataIndex != -1) {
+                        val dataVal = cursor.getString(dataIndex)
+                        if (!dataVal.isNullOrEmpty() && File(dataVal).exists()) {
+                            return dataVal
+                        }
+                    }
+
+                    // 2. 尝试从常见目录拼装 DISPLAY_NAME
+                    val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        val displayName = cursor.getString(nameIndex)
+                        if (!displayName.isNullOrEmpty()) {
+                            val candidateDirs = arrayOf(
+                                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).absolutePath + "/Camera",
+                                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).absolutePath,
+                                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath,
+                                Environment.getExternalStorageDirectory().absolutePath
+                            )
+                            for (dir in candidateDirs) {
+                                val candidateFile = File(dir, displayName)
+                                if (candidateFile.exists()) {
+                                    return candidateFile.absolutePath
+                                }
+                            }
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {
