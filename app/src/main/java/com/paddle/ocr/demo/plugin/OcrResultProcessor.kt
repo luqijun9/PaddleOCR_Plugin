@@ -15,8 +15,8 @@ data class OcrProcessResult(
     val fullText: String = "",
     val json: String = "[]",
     val matchFound: Boolean = false,
-    val matchCenterX: Float? = null,
-    val matchCenterY: Float? = null,
+    val matchCenterX: Int? = null,
+    val matchCenterY: Int? = null,
     val errorMessage: String? = null
 ) {
     /**
@@ -72,16 +72,17 @@ object OcrResultProcessor {
             val fullTextBuilder = StringBuilder()
             val jsonArray = JSONArray()
             var matchFound = false
-            var matchCenterX: Float? = null
-            var matchCenterY: Float? = null
+            var matchCenterX: Int? = null
+            var matchCenterY: Int? = null
 
             result.results.forEachIndexed { i, ocrResult ->
                 fullTextBuilder.append(ocrResult.text).append("\n")
 
-                val startX = ocrResult.box.points.minOf { it.x }
-                val startY = ocrResult.box.points.minOf { it.y }
-                val endX = ocrResult.box.points.maxOf { it.x }
-                val endY = ocrResult.box.points.maxOf { it.y }
+                val startX = ocrResult.box.points.minOf { it.x }.toInt()
+                val startY = ocrResult.box.points.minOf { it.y }.toInt()
+                val endX = ocrResult.box.points.maxOf { it.x }.toInt()
+                val endY = ocrResult.box.points.maxOf { it.y }.toInt()
+                // 整数除法直接向下截断小数，不四舍五入
                 val centerX = (startX + endX) / 2
                 val centerY = (startY + endY) / 2
                 val bounds = "($startX, $startY) - ($endX, $endY)"
@@ -114,8 +115,8 @@ object OcrResultProcessor {
 
                     if (isMatch) {
                         matchFound = true
-                        matchCenterX = centerX.toFloat()
-                        matchCenterY = centerY.toFloat()
+                        matchCenterX = centerX
+                        matchCenterY = centerY
                         Log.d(TAG, "[$SUB_TAG] Match found in item[$i] at center ($matchCenterX, $matchCenterY)")
                     }
                 }
