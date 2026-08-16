@@ -109,8 +109,7 @@ class OcrActionReceiver : BroadcastReceiver() {
 
                     val durationMs = System.currentTimeMillis() - startTime
                     if (result.success) {
-                        val detail = if (result.matchFound) "找到目标 [$targetText]" else "文件识别完成"
-                        PluginStatusManager.notifySuccess(durationMs, detail)
+                        PluginStatusManager.notifySuccess(durationMs, targetText, result.matchFound)
                     } else {
                         PluginStatusManager.notifyFailed(result.errorMessage ?: "未知错误")
                     }
@@ -195,8 +194,7 @@ class OcrActionReceiver : BroadcastReceiver() {
 
                     val durationMs = System.currentTimeMillis() - startTime
                     if (result.success) {
-                        val detail = if (result.matchFound) "找到目标 [$targetText]" else "全屏识别完成"
-                        PluginStatusManager.notifySuccess(durationMs, detail)
+                        PluginStatusManager.notifySuccess(durationMs, targetText, result.matchFound)
                     } else {
                         PluginStatusManager.notifyFailed(result.errorMessage ?: "未知错误")
                     }

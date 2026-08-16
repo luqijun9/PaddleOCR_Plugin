@@ -214,8 +214,7 @@ class ScreenCaptureService : Service() {
 
         val durationMs = if (captureStartTime > 0) System.currentTimeMillis() - captureStartTime else 0
         if (result.success) {
-            val detail = if (result.matchFound) "找到目标 [$targetText]" else "全屏识别完成"
-            PluginStatusManager.notifySuccess(durationMs, detail)
+            PluginStatusManager.notifySuccess(durationMs, targetText, result.matchFound)
         } else {
             PluginStatusManager.notifyFailed(result.errorMessage ?: "未知错误")
         }

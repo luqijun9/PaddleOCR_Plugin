@@ -99,12 +99,12 @@ object PluginStatusManager {
     /**
      * 识别成功状态 (例如: 耗时 230ms · 找到目标 [验证码])
      */
-    fun notifySuccess(durationMs: Long, detail: String) {
+    fun notifySuccess(durationMs: Long, targetText: String? = null, matchFound: Boolean = false) {
         val ctx = appContext ?: return
         val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         val title = ctx.getString(R.string.notif_success_title, timeStr)
-        val content = if (detail.isNotEmpty()) {
-            ctx.getString(R.string.notif_success_target, durationMs, detail)
+        val content = if (matchFound && !targetText.isNullOrEmpty()) {
+            ctx.getString(R.string.notif_success_target, durationMs, targetText)
         } else {
             ctx.getString(R.string.notif_success_all, durationMs)
         }
