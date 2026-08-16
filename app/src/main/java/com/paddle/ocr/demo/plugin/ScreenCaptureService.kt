@@ -147,9 +147,7 @@ class ScreenCaptureService : Service() {
             imageReader?.setOnImageAvailableListener(null, null)
             virtualDisplay?.release()
             mediaProjection?.stop()
-            val errBundle = Bundle().apply {
-                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "截屏超时：5秒内未能获取屏幕图像帧")
-            }
+            val errBundle = OcrProcessResult.createErrorBundle("截屏超时：5秒内未能获取屏幕图像帧")
             signalTaskerFinish(pendingIntent, false, errBundle)
             stopSelf()
         }
@@ -205,9 +203,7 @@ class ScreenCaptureService : Service() {
                 log("IMAGE IS NULL - screen capture failed!")
                 PluginStatusManager.notifyFailed("截屏失败：未能获取屏幕图像")
                 scope.launch {
-                    val errBundle = Bundle().apply {
-                        putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "截屏失败：未能获取屏幕图像")
-                    }
+                    val errBundle = OcrProcessResult.createErrorBundle("截屏失败：未能获取屏幕图像")
                     signalTaskerFinish(pendingIntent, false, errBundle)
                     stopSelf()
                 }

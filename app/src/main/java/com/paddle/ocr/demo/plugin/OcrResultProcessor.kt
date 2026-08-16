@@ -13,7 +13,8 @@ import org.json.JSONObject
 data class OcrProcessResult(
     val success: Boolean,
     val fullText: String = "",
-    val json: String = "[]",
+    val json: String = "",
+    val hasTargetText: Boolean = false,
     val matchFound: Boolean = false,
     val matchCenterX: Int? = null,
     val matchCenterY: Int? = null,
@@ -21,23 +22,52 @@ data class OcrProcessResult(
 ) {
     /**
      * 将处理结果打包为 Tasker/MacroDroid 认识的标准 Bundle 变量
+     * 遵循 Tasker 规范：
+     * - 未配置或无值时，显式赋空字符串 "" 以清除宿主对应变量
+     * - 成功时 %errmsg 返回空字符串 ""
+     * - 失败时 %ocr_full_text, %ocr_json, %match_found, %match_center_x/y 均返回空字符串 ""
      */
     fun toTaskerBundle(): Bundle {
         return Bundle().apply {
             if (success) {
                 putString("%ocr_full_text", fullText)
                 putString("%ocr_json", json)
-                putString("%match_found", matchFound.toString())
-                if (matchFound && matchCenterX != null && matchCenterY != null) {
-                    putString("%match_center_x", matchCenterX.toString())
-                    putString("%match_center_y", matchCenterY.toString())
+                putString("%errmsg", "")
+                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "")
+
+                if (hasTargetText) {
+                    putString("%match_found", matchFound.toString())
+                    if (matchFound && matchCenterX != null && matchCenterY != null) {
+                        putString("%match_center_x", matchCenterX.toString())
+                        putString("%match_center_y", matchCenterY.toString())
+                    } else {
+                        putString("%match_center_x", "")
+                        putString("%match_center_y", "")
+                    }
+                } else {
+                    putString("%match_found", "")
+                    putString("%match_center_x", "")
+                    putString("%match_center_y", "")
                 }
             } else {
-                putString(
-                    TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE,
-                    errorMessage ?: "未知错误"
-                )
+                val err = errorMessage ?: "未知错误"
+                putString("%ocr_full_text", "")
+                putString("%ocr_json", "")
+                putString("%match_found", "")
+                putString("%match_center_x", "")
+                putString("%match_center_y", "")
+                putString("%errmsg", err)
+                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, err)
             }
+        }
+    }
+
+    companion object {
+        fun createErrorBundle(errorMessage: String): Bundle {
+            return OcrProcessResult(
+                success = false,
+                errorMessage = errorMessage
+            ).toTaskerBundle()
         }
     }
 }
@@ -138,6 +168,7 @@ object OcrResultProcessor {
                 success = true,
                 fullText = fullTextStr,
                 json = jsonStr,
+                hasTargetText = targetText.isNotEmpty(),
                 matchFound = matchFound,
                 matchCenterX = matchCenterX,
                 matchCenterY = matchCenterY

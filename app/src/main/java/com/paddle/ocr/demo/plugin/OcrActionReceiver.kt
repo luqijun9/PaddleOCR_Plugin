@@ -145,9 +145,7 @@ class OcrActionReceiver : BroadcastReceiver() {
                     log("File mode OCR exception: ${e.message}")
                     val errMsg = "图片识别异常: ${e.message ?: "未知错误"}"
                     PluginStatusManager.notifyFailed(errMsg)
-                    val errBundle = Bundle().apply {
-                        putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errMsg)
-                    }
+                    val errBundle = OcrProcessResult.createErrorBundle(errMsg)
                     try {
                         TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)
                     } catch (ignore: Exception) {}
@@ -167,9 +165,7 @@ class OcrActionReceiver : BroadcastReceiver() {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
                 val errMsg = "无障碍静默截屏需要 Android 11 (API 30) 及以上系统支持"
                 PluginStatusManager.notifyFailed(errMsg)
-                val errBundle = Bundle().apply {
-                    putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errMsg)
-                }
+                val errBundle = OcrProcessResult.createErrorBundle(errMsg)
                 TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)
                 return
             }
@@ -177,9 +173,7 @@ class OcrActionReceiver : BroadcastReceiver() {
             if (!OcrAccessibilityService.isServiceRunning()) {
                 val errMsg = "无障碍服务未开启，请先在系统设置中启用 PP-OCR 无障碍服务"
                 PluginStatusManager.notifyFailed(errMsg)
-                val errBundle = Bundle().apply {
-                    putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errMsg)
-                }
+                val errBundle = OcrProcessResult.createErrorBundle(errMsg)
                 TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)
                 return
             }
@@ -236,9 +230,7 @@ class OcrActionReceiver : BroadcastReceiver() {
                     log("Accessibility mode OCR exception: ${e.message}")
                     val errMsg = "无障碍识别异常: ${e.message ?: "未知错误"}"
                     PluginStatusManager.notifyFailed(errMsg)
-                    val errBundle = Bundle().apply {
-                        putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errMsg)
-                    }
+                    val errBundle = OcrProcessResult.createErrorBundle(errMsg)
                     try {
                         TaskerPlugin.Setting.signalFinish(context, intent, TaskerPlugin.Setting.RESULT_CODE_FAILED, errBundle)
                     } catch (ignore: Exception) {}

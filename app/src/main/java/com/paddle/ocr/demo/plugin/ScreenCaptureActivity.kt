@@ -97,10 +97,13 @@ class ScreenCaptureActivity : Activity() {
         }
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
-        val varsBundle = Bundle().apply {
-            if (!success && !errorMessage.isNullOrEmpty()) {
-                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, errorMessage)
+        val varsBundle = if (success) {
+            Bundle().apply {
+                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "")
+                putString("%errmsg", "")
             }
+        } else {
+            OcrProcessResult.createErrorBundle(errorMessage ?: "用户取消或拒绝了录屏授权")
         }
         log("sending pendingIntent with resultCode=$resultCode, vars=${varsBundle.keySet()}")
         val resultIntent = Intent().apply {
