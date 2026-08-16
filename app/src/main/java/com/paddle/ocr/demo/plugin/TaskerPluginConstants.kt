@@ -20,6 +20,13 @@ object TaskerPluginConstants {
     const val BUNDLE_KEY_IMAGE_SOURCE = "image_source"
     const val BUNDLE_KEY_IMAGE_PATH = "image_path"
 
+    // Region restriction keys
+    const val BUNDLE_KEY_RESTRICT_REGION = "restrict_region"
+    const val BUNDLE_KEY_REGION_LEFT = "region_left"
+    const val BUNDLE_KEY_REGION_TOP = "region_top"
+    const val BUNDLE_KEY_REGION_RIGHT = "region_right"
+    const val BUNDLE_KEY_REGION_BOTTOM = "region_bottom"
+
     // Image source options
     const val IMAGE_SOURCE_SCREEN_CAPTURE = "screen_capture"
     const val IMAGE_SOURCE_FILE_PATH = "file_path"

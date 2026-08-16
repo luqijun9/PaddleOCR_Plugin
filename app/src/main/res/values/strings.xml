@@ -30,6 +30,26 @@
     <string name="desc_use_regex">Enable regular expression matching rules</string>
     <string name="switch_ignore_case">Ignore Case</string>
     <string name="desc_ignore_case">Match text regardless of upper or lower case</string>
+
+    <!-- Region Restriction -->
+    <string name="section_region_restrict">Restrict Recognition Region (Optional)</string>
+    <string name="switch_restrict_region">Enable Region Restriction</string>
+    <string name="desc_restrict_region">Only recognize within specified screen region, speeding up OCR and avoiding misclicks</string>
+    <string name="region_draw">Draw Region on Screen</string>
+    <string name="region_draw_confirm">Confirm Region</string>
+    <string name="region_draw_cancel">Cancel</string>
+    <string name="region_pixel_range_fmt">Region Pixels: X (%1$d ~ %2$d), Y (%3$d ~ %4$d)</string>
+    <string name="region_pixel_size_fmt">Size: %1$d x %2$d px (Screen: %3$d x %4$d)</string>
+    <string name="region_advanced_show_px">Expand Pixel Fine-Tuning</string>
+    <string name="region_advanced_hide_px">Collapse Pixel Fine-Tuning</string>
+    <string name="region_left_px">Left (px)</string>
+    <string name="region_top_px">Top (px)</string>
+    <string name="region_right_px">Right (px)</string>
+    <string name="region_bottom_px">Bottom (px)</string>
+    <string name="floating_service_capture_btn">Tap to Capture Region</string>
+    <string name="floating_service_toast_hint">Switch to target screen first, then tap the floating button to draw region</string>
+    <string name="floating_service_notification_title">OCR Region Selection</string>
+    <string name="floating_service_notification_desc">Floating window active, tap the button to capture and draw</string>
     <string name="section_output_variables">Output Variables</string>
     <string name="var_desc_full_text">All recognized text concatenated</string>
     <string name="var_desc_json">JSON array with text, confidence, startX/Y, endX/Y, centerX/Y, bounds</string>

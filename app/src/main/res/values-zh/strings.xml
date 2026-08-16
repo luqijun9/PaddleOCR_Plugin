@@ -30,6 +30,26 @@
     <string name="desc_use_regex">开启后使用正则表达式规则进行匹配</string>
     <string name="switch_ignore_case">忽略英文字母大小写</string>
     <string name="desc_ignore_case">开启后匹配时不区分大小写</string>
+
+    <!-- 限制识别范围相关 -->
+    <string name="section_region_restrict">限制识别范围 (可选)</string>
+    <string name="switch_restrict_region">启用识别区域限制</string>
+    <string name="desc_restrict_region">仅识别屏幕指定框选区域，大幅降低耗时并防止误触</string>
+    <string name="region_draw">屏幕画框选区</string>
+    <string name="region_draw_confirm">确定选区</string>
+    <string name="region_draw_cancel">取消</string>
+    <string name="region_pixel_range_fmt">选区像素: X (%1$d ~ %2$d), Y (%3$d ~ %4$d)</string>
+    <string name="region_pixel_size_fmt">尺寸: %1$d x %2$d 像素 (屏幕: %3$d x %4$d)</string>
+    <string name="region_advanced_show_px">展开像素精确微调</string>
+    <string name="region_advanced_hide_px">收起像素精确微调</string>
+    <string name="region_left_px">左边界 (px)</string>
+    <string name="region_top_px">上边界 (px)</string>
+    <string name="region_right_px">右边界 (px)</string>
+    <string name="region_bottom_px">下边界 (px)</string>
+    <string name="floating_service_capture_btn">点击截屏选区</string>
+    <string name="floating_service_toast_hint">请先切换到目标界面，然后点击悬浮按钮截屏画框</string>
+    <string name="floating_service_notification_title">OCR 屏幕区域画框选区</string>
+    <string name="floating_service_notification_desc">悬浮窗已开启，点击悬浮按钮即可截屏画框</string>
     <string name="section_output_variables">输出变量说明</string>
     <string name="var_desc_full_text">识别出的所有文本拼接</string>
     <string name="var_desc_json">含 text, confidence, startX/Y, endX/Y, centerX/Y, bounds 的 JSON 数组</string>

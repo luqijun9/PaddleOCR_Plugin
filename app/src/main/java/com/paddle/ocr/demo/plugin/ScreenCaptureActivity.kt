@@ -20,6 +20,11 @@ class ScreenCaptureActivity : Activity() {
     private var isRegex: Boolean = false
     private var isExactMatch: Boolean = false
     private var isIgnoreCase: Boolean = true
+    private var restrictRegion: Boolean = false
+    private var regionLeft: String = "0.0"
+    private var regionTop: String = "0.0"
+    private var regionRight: String = "1.0"
+    private var regionBottom: String = "1.0"
     private var pendingIntent: android.app.PendingIntent? = null
     private var isAppTest: Boolean = false
 
@@ -34,9 +39,14 @@ class ScreenCaptureActivity : Activity() {
         isRegex = intent.getBooleanExtra("isRegex", false)
         isExactMatch = intent.getBooleanExtra("isExactMatch", false)
         isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", true)
+        restrictRegion = intent.getBooleanExtra("restrictRegion", false)
+        regionLeft = intent.getStringExtra("regionLeft") ?: "0.0"
+        regionTop = intent.getStringExtra("regionTop") ?: "0.0"
+        regionRight = intent.getStringExtra("regionRight") ?: "1.0"
+        regionBottom = intent.getStringExtra("regionBottom") ?: "1.0"
         pendingIntent = intent.getParcelableExtra("pendingIntent")
         isAppTest = intent.getBooleanExtra("isAppTest", false)
-        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, isAppTest=$isAppTest")
+        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, isAppTest=$isAppTest")
 
         if (pendingIntent == null) {
             log("pendingIntent is NULL!")
@@ -68,6 +78,11 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("isRegex", isRegex)
                     putExtra("isExactMatch", isExactMatch)
                     putExtra("isIgnoreCase", isIgnoreCase)
+                    putExtra("restrictRegion", restrictRegion)
+                    putExtra("regionLeft", regionLeft)
+                    putExtra("regionTop", regionTop)
+                    putExtra("regionRight", regionRight)
+                    putExtra("regionBottom", regionBottom)
                     putExtra("pendingIntent", pendingIntent)
                     putExtra("isAppTest", isAppTest)
                 }

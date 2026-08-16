@@ -3,9 +3,12 @@ package com.paddle.ocr.demo.plugin
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,6 +16,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +33,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +47,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.paddle.ocr.demo.R
 import com.paddle.ocr.demo.ui.theme.PPOCRTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
 class ActionEditActivity : ComponentActivity() {
@@ -48,7 +59,83 @@ class ActionEditActivity : ComponentActivity() {
     private var initialIsRegex: Boolean = false
     private var initialIsExactMatch: Boolean = false
     private var initialIsIgnoreCase: Boolean = true
+    private var initialRestrictRegion: Boolean = false
+    private var initialRegionLeft: String = "0.0"
+    private var initialRegionTop: String = "0.0"
+    private var initialRegionRight: String = "1.0"
+    private var initialRegionBottom: String = "1.0"
     private var instanceId: String = ""
+
+    private val regionResultFlow = MutableStateFlow<FloatArray?>(null)
+    private var pendingRestrictRegion = false
+    private var pendingRegionLeft = "0.0"
+    private var pendingRegionTop = "0.0"
+    private var pendingRegionRight = "1.0"
+    private var pendingRegionBottom = "1.0"
+
+    private val regionDrawLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val coords = result.data?.getFloatArrayExtra("REGION_RESULT")
+            if (coords != null && coords.size == 4) {
+                regionResultFlow.value = coords
+            }
+        }
+    }
+
+    private val mediaProjectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            FloatingSelectionService.screenshotCallback = {
+                val intent = Intent(this, RegionDrawActivity::class.java).apply {
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, pendingRestrictRegion)
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, pendingRegionLeft)
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, pendingRegionTop)
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, pendingRegionRight)
+                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, pendingRegionBottom)
+                }
+                regionDrawLauncher.launch(intent)
+            }
+            val serviceIntent = Intent(this, FloatingSelectionService::class.java).apply {
+                putExtra("resultCode", result.resultCode)
+                putExtra("data", result.data)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        }
+    }
+
+    private fun requestRegionScreenCapture(
+        restrict: Boolean,
+        left: String,
+        top: String,
+        right: String,
+        bottom: String
+    ) {
+        pendingRestrictRegion = restrict
+        pendingRegionLeft = left
+        pendingRegionTop = top
+        pendingRegionRight = right
+        pendingRegionBottom = bottom
+
+        if (!Settings.canDrawOverlays(this)) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
+            Toast.makeText(this, getString(R.string.perm_overlay_title), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        mediaProjectionLauncher.launch(mgr.createScreenCaptureIntent())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +154,11 @@ class ActionEditActivity : ComponentActivity() {
                 initialIsRegex = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, false)
                 initialIsExactMatch = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, false)
                 initialIsIgnoreCase = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, true)
+                initialRestrictRegion = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, false)
+                initialRegionLeft = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, "0.0")
+                initialRegionTop = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, "0.0")
+                initialRegionRight = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, "1.0")
+                initialRegionBottom = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, "1.0")
                 instanceId = bundle.getString("plugin_instance_id") ?: UUID.randomUUID().toString()
             }
         }
@@ -83,8 +175,29 @@ class ActionEditActivity : ComponentActivity() {
                     initialIsRegex = initialIsRegex,
                     initialIsExactMatch = initialIsExactMatch,
                     initialIsIgnoreCase = initialIsIgnoreCase,
-                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase ->
-                        saveAndFinish(imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase)
+                    initialRestrictRegion = initialRestrictRegion,
+                    initialRegionLeft = initialRegionLeft,
+                    initialRegionTop = initialRegionTop,
+                    initialRegionRight = initialRegionRight,
+                    initialRegionBottom = initialRegionBottom,
+                    regionResultFlow = regionResultFlow,
+                    onLaunchScreenCapture = { restrict, left, top, right, bottom ->
+                        requestRegionScreenCapture(restrict, left, top, right, bottom)
+                    },
+                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom ->
+                        saveAndFinish(
+                            imageSource,
+                            imagePath,
+                            targetText,
+                            isRegex,
+                            isExactMatch,
+                            isIgnoreCase,
+                            restrictRegion,
+                            regionLeft,
+                            regionTop,
+                            regionRight,
+                            regionBottom
+                        )
                     },
                     onCancel = {
                         finish()
@@ -100,7 +213,12 @@ class ActionEditActivity : ComponentActivity() {
         targetText: String,
         isRegex: Boolean,
         isExactMatch: Boolean,
-        isIgnoreCase: Boolean
+        isIgnoreCase: Boolean,
+        restrictRegion: Boolean,
+        regionLeft: String,
+        regionTop: String,
+        regionRight: String,
+        regionBottom: String
     ) {
         val resultIntent = Intent()
         val resultBundle = Bundle().apply {
@@ -110,17 +228,27 @@ class ActionEditActivity : ComponentActivity() {
             putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX, isRegex)
             putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, isExactMatch)
             putBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, isIgnoreCase)
+            putBoolean(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, restrictRegion)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, regionLeft)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, regionTop)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, regionRight)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, regionBottom)
             putString("plugin_instance_id", instanceId)
         }
 
         // 设置在 Tasker/MacroDroid 动作列表里显示的摘要 (Blurb)
-        val blurb = when (imageSource) {
-            TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH -> {
-                val fileName = imagePath.substringAfterLast('/').ifEmpty { "本地图片" }
-                if (targetText.isNotEmpty()) "文件[$fileName] 查找: $targetText" else "识别文件: $fileName"
+        val blurb = buildString {
+            when (imageSource) {
+                TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH -> {
+                    val fileName = imagePath.substringAfterLast('/').ifEmpty { "本地图片" }
+                    if (targetText.isNotEmpty()) append("文件[$fileName] 查找: $targetText") else append("识别文件: $fileName")
+                }
+                else -> {
+                    if (targetText.isNotEmpty()) append("屏幕查找: $targetText") else append("识别全屏文字")
+                }
             }
-            else -> {
-                if (targetText.isNotEmpty()) "屏幕查找: $targetText" else "识别全屏文字"
+            if (restrictRegion) {
+                append(" (区域限制)")
             }
         }
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_STRING_BLURB, blurb)
@@ -143,7 +271,11 @@ class ActionEditActivity : ComponentActivity() {
                 resultBundle,
                 arrayOf(
                     TaskerPluginConstants.BUNDLE_KEY_TARGET_TEXT,
-                    TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH
+                    TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_TOP,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM
                 )
             )
         }
@@ -165,7 +297,14 @@ fun ActionEditScreen(
     initialIsRegex: Boolean,
     initialIsExactMatch: Boolean,
     initialIsIgnoreCase: Boolean,
-    onSave: (String, String, String, Boolean, Boolean, Boolean) -> Unit,
+    initialRestrictRegion: Boolean,
+    initialRegionLeft: String,
+    initialRegionTop: String,
+    initialRegionRight: String,
+    initialRegionBottom: String,
+    regionResultFlow: StateFlow<FloatArray?>,
+    onLaunchScreenCapture: (Boolean, String, String, String, String) -> Unit,
+    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
@@ -175,6 +314,21 @@ fun ActionEditScreen(
     var isRegex by remember { mutableStateOf(initialIsRegex) }
     var isExactMatch by remember { mutableStateOf(initialIsExactMatch) }
     var isIgnoreCase by remember { mutableStateOf(initialIsIgnoreCase) }
+    var restrictRegion by remember { mutableStateOf(initialRestrictRegion) }
+    var regionLeft by remember { mutableStateOf(initialRegionLeft) }
+    var regionTop by remember { mutableStateOf(initialRegionTop) }
+    var regionRight by remember { mutableStateOf(initialRegionRight) }
+    var regionBottom by remember { mutableStateOf(initialRegionBottom) }
+
+    val regionResult by regionResultFlow.collectAsState()
+    LaunchedEffect(regionResult) {
+        regionResult?.let {
+            regionLeft = String.format(java.util.Locale.US, "%.4f", it[0])
+            regionTop = String.format(java.util.Locale.US, "%.4f", it[1])
+            regionRight = String.format(java.util.Locale.US, "%.4f", it[2])
+            regionBottom = String.format(java.util.Locale.US, "%.4f", it[3])
+        }
+    }
 
     // 系统文件管理器 (DocumentsUI) 选择器 Launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -200,7 +354,19 @@ fun ActionEditScreen(
 
     // 返回键默认自动保存
     BackHandler {
-        onSave(imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase)
+        onSave(
+            imageSource,
+            imagePath,
+            targetText,
+            isRegex,
+            isExactMatch,
+            isIgnoreCase,
+            restrictRegion,
+            regionLeft,
+            regionTop,
+            regionRight,
+            regionBottom
+        )
     }
 
     Scaffold(
@@ -222,7 +388,21 @@ fun ActionEditScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onSave(imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase) }) {
+                    IconButton(onClick = {
+                        onSave(
+                            imageSource,
+                            imagePath,
+                            targetText,
+                            isRegex,
+                            isExactMatch,
+                            isIgnoreCase,
+                            restrictRegion,
+                            regionLeft,
+                            regionTop,
+                            regionRight,
+                            regionBottom
+                        )
+                    }) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = stringResource(R.string.btn_save),
@@ -255,7 +435,21 @@ fun ActionEditScreen(
                         Text(stringResource(R.string.btn_clear))
                     }
                     Button(
-                        onClick = { onSave(imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase) },
+                        onClick = {
+                            onSave(
+                                imageSource,
+                                imagePath,
+                                targetText,
+                                isRegex,
+                                isExactMatch,
+                                isIgnoreCase,
+                                restrictRegion,
+                                regionLeft,
+                                regionTop,
+                                regionRight,
+                                regionBottom
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -556,6 +750,217 @@ fun ActionEditScreen(
                             checked = isIgnoreCase,
                             onCheckedChange = { isIgnoreCase = it }
                         )
+                    }
+                }
+            }
+
+            // 限制识别范围卡片
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.section_region_restrict),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = stringResource(R.string.desc_restrict_region),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = restrictRegion,
+                            onCheckedChange = { restrictRegion = it }
+                        )
+                    }
+
+                    if (restrictRegion) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                        val dm = context.resources.displayMetrics
+                        val screenW = dm.widthPixels
+                        val screenH = dm.heightPixels
+
+                        val leftVal = regionLeft.toFloatOrNull()?.coerceIn(0f, 1f) ?: 0f
+                        val topVal = regionTop.toFloatOrNull()?.coerceIn(0f, 1f) ?: 0f
+                        val rightVal = regionRight.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
+                        val bottomVal = regionBottom.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
+
+                        val leftPx = (leftVal * screenW).toInt()
+                        val topPx = (topVal * screenH).toInt()
+                        val rightPx = (rightVal * screenW).toInt()
+                        val bottomPx = (bottomVal * screenH).toInt()
+
+                        val widthPx = (rightPx - leftPx).coerceAtLeast(0)
+                        val heightPx = (bottomPx - topPx).coerceAtLeast(0)
+
+                        // 迷你全屏示意缩略图
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(90.dp)
+                                    .height(160.dp)
+                                    .background(Color(0xFF202124), RoundedCornerShape(6.dp))
+                            ) {
+                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                    drawRect(
+                                        color = Color(0xFF00E676).copy(alpha = 0.3f),
+                                        topLeft = Offset(leftVal * size.width, topVal * size.height),
+                                        size = Size((rightVal - leftVal).coerceAtLeast(0f) * size.width, (bottomVal - topVal).coerceAtLeast(0f) * size.height)
+                                    )
+                                    drawRect(
+                                        color = Color(0xFF00E676),
+                                        topLeft = Offset(leftVal * size.width, topVal * size.height),
+                                        size = Size((rightVal - leftVal).coerceAtLeast(0f) * size.width, (bottomVal - topVal).coerceAtLeast(0f) * size.height),
+                                        style = Stroke(width = 2f)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Text(
+                                text = stringResource(R.string.region_pixel_range_fmt, leftPx, rightPx, topPx, bottomPx),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.region_pixel_size_fmt, widthPx, heightPx, screenW, screenH),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // 屏幕画框选区主按钮
+                        Button(
+                            onClick = { onLaunchScreenCapture(restrictRegion, regionLeft, regionTop, regionRight, regionBottom) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.region_draw), fontWeight = FontWeight.Bold)
+                        }
+
+                        // 可折叠高级像素手动微调
+                        var showAdvancedInput by remember { mutableStateOf(false) }
+                        var pxLeftText by remember(regionLeft, screenW) { mutableStateOf(leftPx.toString()) }
+                        var pxTopText by remember(regionTop, screenH) { mutableStateOf(topPx.toString()) }
+                        var pxRightText by remember(regionRight, screenW) { mutableStateOf(rightPx.toString()) }
+                        var pxBottomText by remember(regionBottom, screenH) { mutableStateOf(bottomPx.toString()) }
+
+                        TextButton(
+                            onClick = { showAdvancedInput = !showAdvancedInput },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text(if (showAdvancedInput) stringResource(R.string.region_advanced_hide_px) else stringResource(R.string.region_advanced_show_px))
+                        }
+
+                        AnimatedVisibility(visible = showAdvancedInput) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = pxLeftText,
+                                        onValueChange = { input ->
+                                            pxLeftText = input
+                                            input.toFloatOrNull()?.let { px ->
+                                                if (screenW > 0) {
+                                                    regionLeft = String.format(java.util.Locale.US, "%.4f", (px / screenW).coerceIn(0f, 1f))
+                                                }
+                                            }
+                                        },
+                                        label = { Text(stringResource(R.string.region_left_px)) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    OutlinedTextField(
+                                        value = pxTopText,
+                                        onValueChange = { input ->
+                                            pxTopText = input
+                                            input.toFloatOrNull()?.let { px ->
+                                                if (screenH > 0) {
+                                                    regionTop = String.format(java.util.Locale.US, "%.4f", (px / screenH).coerceIn(0f, 1f))
+                                                }
+                                            }
+                                        },
+                                        label = { Text(stringResource(R.string.region_top_px)) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = pxRightText,
+                                        onValueChange = { input ->
+                                            pxRightText = input
+                                            input.toFloatOrNull()?.let { px ->
+                                                if (screenW > 0) {
+                                                    regionRight = String.format(java.util.Locale.US, "%.4f", (px / screenW).coerceIn(0f, 1f))
+                                                }
+                                            }
+                                        },
+                                        label = { Text(stringResource(R.string.region_right_px)) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    OutlinedTextField(
+                                        value = pxBottomText,
+                                        onValueChange = { input ->
+                                            pxBottomText = input
+                                            input.toFloatOrNull()?.let { px ->
+                                                if (screenH > 0) {
+                                                    regionBottom = String.format(java.util.Locale.US, "%.4f", (px / screenH).coerceIn(0f, 1f))
+                                                }
+                                            }
+                                        },
+                                        label = { Text(stringResource(R.string.region_bottom_px)) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

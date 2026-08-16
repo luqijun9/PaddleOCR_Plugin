@@ -72,6 +72,13 @@ data class OcrProcessResult(
     }
 }
 
+data class CropResult(
+    val croppedBitmap: Bitmap,
+    val offsetX: Int,
+    val offsetY: Int,
+    val isCropped: Boolean
+)
+
 /**
  * 通用 OCR 结果处理器 (纯业务与算法层，供截屏、文件图片等多数据源共享)
  */
@@ -80,12 +87,57 @@ object OcrResultProcessor {
     private const val TAG = "OcrPlugin"
     private const val SUB_TAG = "Processor"
 
+    fun cropBitmapIfNeeded(
+        bitmap: Bitmap,
+        restrictRegion: Boolean,
+        regionLeft: String,
+        regionTop: String,
+        regionRight: String,
+        regionBottom: String
+    ): CropResult {
+        if (!restrictRegion) {
+            return CropResult(bitmap, 0, 0, false)
+        }
+        return try {
+            val leftPct = regionLeft.toFloatOrNull()?.coerceIn(0f, 1f) ?: 0f
+            val topPct = regionTop.toFloatOrNull()?.coerceIn(0f, 1f) ?: 0f
+            val rightPct = regionRight.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
+            val bottomPct = regionBottom.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
+
+            val bW = bitmap.width
+            val bH = bitmap.height
+
+            val cropLeft = (leftPct * bW).toInt().coerceIn(0, bW)
+            val cropTop = (topPct * bH).toInt().coerceIn(0, bH)
+            val cropRight = (rightPct * bW).toInt().coerceIn(0, bW)
+            val cropBottom = (bottomPct * bH).toInt().coerceIn(0, bH)
+
+            val cropWidth = cropRight - cropLeft
+            val cropHeight = cropBottom - cropTop
+
+            if (cropWidth > 0 && cropHeight > 0 && (cropWidth < bW || cropHeight < bH)) {
+                val cropped = Bitmap.createBitmap(bitmap, cropLeft, cropTop, cropWidth, cropHeight)
+                CropResult(cropped, cropLeft, cropTop, true)
+            } else {
+                CropResult(bitmap, 0, 0, false)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "[$SUB_TAG] Failed to crop bitmap: ${e.message}", e)
+            CropResult(bitmap, 0, 0, false)
+        }
+    }
+
     suspend fun process(
         bitmap: Bitmap,
         targetText: String,
         isRegex: Boolean = false,
         isExactMatch: Boolean = false,
-        isIgnoreCase: Boolean = true
+        isIgnoreCase: Boolean = true,
+        restrictRegion: Boolean = false,
+        regionLeft: String = "0.0",
+        regionTop: String = "0.0",
+        regionRight: String = "1.0",
+        regionBottom: String = "1.0"
     ): OcrProcessResult {
         val ocrEngine = OCRApplication.instance.ocr
         if (ocrEngine == null) {
@@ -96,9 +148,14 @@ object OcrResultProcessor {
             )
         }
 
+        val cropResult = cropBitmapIfNeeded(bitmap, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
+        val inferenceBitmap = cropResult.croppedBitmap
+        val offsetX = cropResult.offsetX
+        val offsetY = cropResult.offsetY
+
         return try {
-            Log.d(TAG, "[$SUB_TAG] Starting OCR recognition on bitmap: ${bitmap.width}x${bitmap.height}...")
-            val result = ocrEngine.recognize(bitmap)
+            Log.d(TAG, "[$SUB_TAG] Starting OCR recognition on bitmap: ${inferenceBitmap.width}x${inferenceBitmap.height} (offset: $offsetX, $offsetY)...")
+            val result = ocrEngine.recognize(inferenceBitmap)
             Log.d(TAG, "[$SUB_TAG] recognize() returned ${result.results.size} text blocks")
 
             val fullTextBuilder = StringBuilder()
@@ -110,11 +167,15 @@ object OcrResultProcessor {
             result.results.forEachIndexed { i, ocrResult ->
                 fullTextBuilder.append(ocrResult.text).append("\n")
 
-                val startX = ocrResult.box.points.minOf { it.x }.toInt()
-                val startY = ocrResult.box.points.minOf { it.y }.toInt()
-                val endX = ocrResult.box.points.maxOf { it.x }.toInt()
-                val endY = ocrResult.box.points.maxOf { it.y }.toInt()
-                // 整数除法直接向下截断小数，不四舍五入
+                val localStartX = ocrResult.box.points.minOf { it.x }.toInt()
+                val localStartY = ocrResult.box.points.minOf { it.y }.toInt()
+                val localEndX = ocrResult.box.points.maxOf { it.x }.toInt()
+                val localEndY = ocrResult.box.points.maxOf { it.y }.toInt()
+
+                val startX = localStartX + offsetX
+                val startY = localStartY + offsetY
+                val endX = localEndX + offsetX
+                val endY = localEndY + offsetY
                 val centerX = (startX + endX) / 2
                 val centerY = (startY + endY) / 2
                 val bounds = "($startX, $startY) - ($endX, $endY)"
@@ -179,6 +240,14 @@ object OcrResultProcessor {
                 success = false,
                 errorMessage = "OCR识别异常: ${e.message ?: "未知错误"}"
             )
+        } finally {
+            if (cropResult.isCropped) {
+                try {
+                    if (!inferenceBitmap.isRecycled) {
+                        inferenceBitmap.recycle()
+                    }
+                } catch (ignore: Exception) {}
+            }
         }
     }
 }

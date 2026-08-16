@@ -58,10 +58,15 @@ class OcrActionReceiver : BroadcastReceiver() {
         val isRegex = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_REGEX) ?: false
         val isExactMatch = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_EXACT_MATCH, false) ?: false
         val isIgnoreCase = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_IS_IGNORE_CASE, true) ?: true
+        val restrictRegion = bundle?.getBoolean(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, false) ?: false
+        val regionLeft = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT) ?: "0.0"
+        val regionTop = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP) ?: "0.0"
+        val regionRight = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT) ?: "1.0"
+        val regionBottom = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM) ?: "1.0"
         val imageSource = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_SOURCE) ?: TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE
         val imagePath = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH) ?: ""
 
-        log("targetText='$targetText', isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, imageSource=$imageSource, imagePath='$imagePath'")
+        log("targetText='$targetText', isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, imageSource=$imageSource, imagePath='$imagePath'")
 
         // 4. 设置 RESULT_CODE_PENDING
         if (isOrderedBroadcast) {
@@ -98,7 +103,12 @@ class OcrActionReceiver : BroadcastReceiver() {
                                 targetText = targetText,
                                 isRegex = isRegex,
                                 isExactMatch = isExactMatch,
-                                isIgnoreCase = isIgnoreCase
+                                isIgnoreCase = isIgnoreCase,
+                                restrictRegion = restrictRegion,
+                                regionLeft = regionLeft,
+                                regionTop = regionTop,
+                                regionRight = regionRight,
+                                regionBottom = regionBottom
                             )
                             try {
                                 if (!loadResult.bitmap.isRecycled) {
@@ -189,7 +199,12 @@ class OcrActionReceiver : BroadcastReceiver() {
                             targetText = targetText,
                             isRegex = isRegex,
                             isExactMatch = isExactMatch,
-                            isIgnoreCase = isIgnoreCase
+                            isIgnoreCase = isIgnoreCase,
+                            restrictRegion = restrictRegion,
+                            regionLeft = regionLeft,
+                            regionTop = regionTop,
+                            regionRight = regionRight,
+                            regionBottom = regionBottom
                         )
                         try {
                             if (!bitmap.isRecycled) bitmap.recycle()
@@ -249,6 +264,11 @@ class OcrActionReceiver : BroadcastReceiver() {
             putExtra("isRegex", isRegex)
             putExtra("isExactMatch", isExactMatch)
             putExtra("isIgnoreCase", isIgnoreCase)
+            putExtra("restrictRegion", restrictRegion)
+            putExtra("regionLeft", regionLeft)
+            putExtra("regionTop", regionTop)
+            putExtra("regionRight", regionRight)
+            putExtra("regionBottom", regionBottom)
             putExtra("pendingIntent", pendingIntent)
         }
         log("captureIntent created")

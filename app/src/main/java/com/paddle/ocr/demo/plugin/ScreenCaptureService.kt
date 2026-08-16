@@ -80,11 +80,16 @@ class ScreenCaptureService : Service() {
         val isRegex = intent.getBooleanExtra("isRegex", false)
         val isExactMatch = intent.getBooleanExtra("isExactMatch", false)
         val isIgnoreCase = intent.getBooleanExtra("isIgnoreCase", true)
+        val restrictRegion = intent.getBooleanExtra("restrictRegion", false)
+        val regionLeft = intent.getStringExtra("regionLeft") ?: "0.0"
+        val regionTop = intent.getStringExtra("regionTop") ?: "0.0"
+        val regionRight = intent.getStringExtra("regionRight") ?: "1.0"
+        val regionBottom = intent.getStringExtra("regionBottom") ?: "1.0"
         val pendingIntent: android.app.PendingIntent? = intent.getParcelableExtra("pendingIntent")
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
         log("resultCode=$resultCode")
-        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, isAppTest=$isAppTest")
+        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, isAppTest=$isAppTest")
         log("data action=${data.action}")
 
         if (pendingIntent != null) {
@@ -98,7 +103,19 @@ class ScreenCaptureService : Service() {
         log("mediaProjection created: ${mediaProjection != null}")
 
         log("calling captureScreenAndOcr")
-        captureScreenAndOcr(targetText, isRegex, isExactMatch, isIgnoreCase, pendingIntent, isAppTest)
+        captureScreenAndOcr(
+            targetText = targetText,
+            isRegex = isRegex,
+            isExactMatch = isExactMatch,
+            isIgnoreCase = isIgnoreCase,
+            restrictRegion = restrictRegion,
+            regionLeft = regionLeft,
+            regionTop = regionTop,
+            regionRight = regionRight,
+            regionBottom = regionBottom,
+            pendingIntent = pendingIntent,
+            isAppTest = isAppTest
+        )
 
         return START_NOT_STICKY
     }
@@ -109,6 +126,11 @@ class ScreenCaptureService : Service() {
         isRegex: Boolean,
         isExactMatch: Boolean,
         isIgnoreCase: Boolean,
+        restrictRegion: Boolean,
+        regionLeft: String,
+        regionTop: String,
+        regionRight: String,
+        regionBottom: String,
         pendingIntent: android.app.PendingIntent?,
         isAppTest: Boolean
     ) {
@@ -195,7 +217,20 @@ class ScreenCaptureService : Service() {
 
                 log("launching coroutine for OCR processing")
                 scope.launch {
-                    processOcr(croppedBitmap, targetText, isRegex, isExactMatch, isIgnoreCase, pendingIntent, isAppTest)
+                    processOcr(
+                        bitmap = croppedBitmap,
+                        targetText = targetText,
+                        isRegex = isRegex,
+                        isExactMatch = isExactMatch,
+                        isIgnoreCase = isIgnoreCase,
+                        restrictRegion = restrictRegion,
+                        regionLeft = regionLeft,
+                        regionTop = regionTop,
+                        regionRight = regionRight,
+                        regionBottom = regionBottom,
+                        pendingIntent = pendingIntent,
+                        isAppTest = isAppTest
+                    )
                     log("OCR processing done, calling stopSelf")
                     stopSelf()
                 }
@@ -218,6 +253,11 @@ class ScreenCaptureService : Service() {
         isRegex: Boolean,
         isExactMatch: Boolean,
         isIgnoreCase: Boolean,
+        restrictRegion: Boolean,
+        regionLeft: String,
+        regionTop: String,
+        regionRight: String,
+        regionBottom: String,
         pendingIntent: android.app.PendingIntent?,
         isAppTest: Boolean
     ) {
@@ -227,7 +267,12 @@ class ScreenCaptureService : Service() {
             targetText = targetText,
             isRegex = isRegex,
             isExactMatch = isExactMatch,
-            isIgnoreCase = isIgnoreCase
+            isIgnoreCase = isIgnoreCase,
+            restrictRegion = restrictRegion,
+            regionLeft = regionLeft,
+            regionTop = regionTop,
+            regionRight = regionRight,
+            regionBottom = regionBottom
         )
         log("OcrResultProcessor returned success=${result.success}, matchFound=${result.matchFound}, error=${result.errorMessage}")
 
