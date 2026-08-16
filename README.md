@@ -60,3 +60,11 @@ When triggered in Tasker / MacroDroid, the plugin populates the following variab
    * **Condition:** If `%match_found ~ true`
    * **Shell Action:** `input tap %match_center_x %match_center_y` (or use AutoInput / MacroDroid UI Interaction by coordinates)
    * **End If**
+
+---
+
+## 📄 License
+
+This project is licensed under the [Apache License 2.0](LICENSE).  
+Underlying OCR inference capabilities are powered by [PaddlePaddle / PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR), which is also licensed under Apache 2.0.
+
