@@ -89,5 +89,5 @@ secrets.properties
 .kotlin/
 
 # Model
-*.onnx
-*.yml
+!ppocr-sdk/src/main/assets/models/**
+
