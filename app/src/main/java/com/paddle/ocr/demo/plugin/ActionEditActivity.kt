@@ -393,6 +393,9 @@ fun ActionEditScreen(
                 OverlayPermissionCheckCard(context)
             }
 
+            // 通知权限检测卡片
+            NotificationPermissionCheckCard(context)
+
             // 目标文本配置卡片
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -692,6 +695,81 @@ fun StoragePermissionCheckCard(context: Context) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("一键前往开启存储权限")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificationPermissionCheckCard(context: Context) {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return
+
+    fun checkNotificationPermission(): Boolean {
+        return androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.POST_NOTIFICATIONS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    var hasPermission by remember { mutableStateOf(checkNotificationPermission()) }
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasPermission = checkNotificationPermission()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (!hasPermission) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Text(
+                        text = "建议开启通知权限",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+                Text(
+                    text = "开启通知权限后，插件可在通知栏常驻保活，并在宏触发时实时更新识别耗时与匹配结果。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                Button(
+                    onClick = {
+                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("一键开启通知权限")
                 }
             }
         }

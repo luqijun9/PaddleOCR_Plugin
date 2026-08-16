@@ -252,14 +252,6 @@ class ScreenCaptureService : Service() {
             log("pendingIntent CanceledException: ${e.message}")
             e.printStackTrace()
         }
-
-        Handler(Looper.getMainLooper()).post {
-            if (success) {
-                Toast.makeText(this, "OCR完成，已返回变量到Tasker", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "OCR失败或未匹配", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     override fun onDestroy() {
