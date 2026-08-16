@@ -24,13 +24,32 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keyFilePath = System.getenv("SIGNING_KEY_PATH") ?: "key.keystore"
+            val keyFile = rootProject.file(keyFilePath).takeIf { it.exists() }
+                ?: file(keyFilePath).takeIf { it.exists() }
+
+            if (keyFile != null && keyFile.exists()) {
+                storeFile = keyFile
+                storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: System.getProperty("SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: System.getProperty("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: System.getProperty("SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null && it.storeFile?.exists() == true } ?: signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            // debug continues to use default debug signing
         }
     }
     compileOptions {
