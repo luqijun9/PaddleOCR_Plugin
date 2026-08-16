@@ -27,9 +27,9 @@
     <string name="contains_match">Contains</string>
     <string name="exact_match">Exact Match</string>
     <string name="switch_use_regex">Use Regular Expression</string>
-    <string name="desc_use_regex">Enable regex matching (e.g. \\d{4,6} for verification codes)</string>
+    <string name="desc_use_regex">Enable regular expression matching rules</string>
     <string name="switch_ignore_case">Ignore Case</string>
-    <string name="desc_ignore_case">Match regardless of upper/lower case (e.g. ABC matches abc)</string>
+    <string name="desc_ignore_case">Match text regardless of upper or lower case</string>
     <string name="section_output_variables">Output Variables</string>
     <string name="var_desc_full_text">All recognized text concatenated</string>
     <string name="var_desc_json">JSON array with text, confidence, startX/Y, endX/Y, centerX/Y, bounds</string>

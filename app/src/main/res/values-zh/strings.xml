@@ -27,9 +27,9 @@
     <string name="contains_match">包含匹配</string>
     <string name="exact_match">完全匹配</string>
     <string name="switch_use_regex">使用正则表达式</string>
-    <string name="desc_use_regex">开启后支持正则匹配（例如 \\d{4,6} 匹配验证码）</string>
+    <string name="desc_use_regex">开启后使用正则表达式规则进行匹配</string>
     <string name="switch_ignore_case">忽略英文字母大小写</string>
-    <string name="desc_ignore_case">开启后不区分大小写（例如 ABC 也能匹配 abc）</string>
+    <string name="desc_ignore_case">开启后匹配时不区分大小写</string>
     <string name="section_output_variables">输出变量说明</string>
     <string name="var_desc_full_text">识别出的所有文本拼接</string>
     <string name="var_desc_json">含 text, confidence, startX/Y, endX/Y, centerX/Y, bounds 的 JSON 数组</string>

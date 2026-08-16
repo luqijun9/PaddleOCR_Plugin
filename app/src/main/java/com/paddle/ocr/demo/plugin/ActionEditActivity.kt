@@ -465,9 +465,6 @@ fun ActionEditScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(stringResource(R.string.label_target_text)) },
                         placeholder = { Text(stringResource(R.string.placeholder_target_text)) },
-                        supportingText = {
-                            Text(stringResource(R.string.desc_use_regex))
-                        },
                         trailingIcon = {
                             if (targetText.isNotEmpty()) {
                                 IconButton(onClick = { targetText = "" }) {
