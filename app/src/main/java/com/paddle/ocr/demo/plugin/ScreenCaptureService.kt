@@ -176,6 +176,9 @@ class ScreenCaptureService : Service() {
                 )
                 bitmap.copyPixelsFromBuffer(buffer)
                 val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                if (croppedBitmap != bitmap) {
+                    try { bitmap.recycle() } catch (ignore: Exception) {}
+                }
                 image.close()
                 log("bitmap created: ${croppedBitmap.width}x${croppedBitmap.height}")
 
@@ -224,6 +227,9 @@ class ScreenCaptureService : Service() {
                 OCRApplication.instance.appTestResult.emit(Pair(bitmap, ocrModelResult))
             }
         } else {
+            try {
+                if (!bitmap.isRecycled) bitmap.recycle()
+            } catch (ignore: Exception) {}
             signalTaskerFinish(pendingIntent, result.success, result.toTaskerBundle())
         }
     }

@@ -91,7 +91,13 @@ class OcrActionReceiver : BroadcastReceiver() {
                 try {
                     val result = when (val loadResult = ImageFileLoader.loadBitmap(context, imagePath)) {
                         is ImageLoadResult.Success -> {
-                            OcrResultProcessor.process(loadResult.bitmap, targetText, isRegex)
+                            val res = OcrResultProcessor.process(loadResult.bitmap, targetText, isRegex)
+                            try {
+                                if (!loadResult.bitmap.isRecycled) {
+                                    loadResult.bitmap.recycle()
+                                }
+                            } catch (ignore: Exception) {}
+                            res
                         }
                         is ImageLoadResult.Failure -> {
                             OcrProcessResult(
