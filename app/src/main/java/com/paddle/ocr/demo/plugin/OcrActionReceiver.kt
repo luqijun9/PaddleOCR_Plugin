@@ -87,14 +87,16 @@ class OcrActionReceiver : BroadcastReceiver() {
             val pendingResult = goAsync()
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 try {
-                    val bitmap = ImageFileLoader.loadBitmap(context, imagePath)
-                    val result = if (bitmap != null) {
-                        OcrResultProcessor.process(bitmap, targetText, isRegex)
-                    } else {
-                        OcrProcessResult(
-                            success = false,
-                            errorMessage = "无法加载或解码指定路径的图片: $imagePath"
-                        )
+                    val result = when (val loadResult = ImageFileLoader.loadBitmap(context, imagePath)) {
+                        is ImageLoadResult.Success -> {
+                            OcrResultProcessor.process(loadResult.bitmap, targetText, isRegex)
+                        }
+                        is ImageLoadResult.Failure -> {
+                            OcrProcessResult(
+                                success = false,
+                                errorMessage = loadResult.errorMessage
+                            )
+                        }
                     }
 
                     val finalResultCode = if (result.success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
