@@ -24,6 +24,41 @@
         android:layout_height="wrap_content"
         android:text="使用正则表达式匹配" />
 
+    <LinearLayout
+        android:id="@+id/layoutOverlayWarning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFF3E0"
+        android:padding="12dp"
+        android:layout_marginTop="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚠️ 未开启悬浮窗/后台弹出权限"
+            android:textColor="#E65100"
+            android:textStyle="bold"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="后台自动截屏需要“显示在其他应用上层”（部分机型如小米/vivo还需开启“后台弹出界面”）。"
+            android:textColor="#BF360C"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnGrantOverlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="一键前往开启权限"
+            android:textSize="13sp" />
+    </LinearLayout>
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -48,6 +48,9 @@
         <activity
             android:name=".plugin.ScreenCaptureActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:taskAffinity=".capture"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
             android:exported="false" />
 
         <service

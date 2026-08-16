@@ -76,7 +76,7 @@ class OcrActionReceiver : BroadcastReceiver() {
         // 6. 启动 ScreenCaptureActivity
         log("--- starting ScreenCaptureActivity ---")
         val captureIntent = Intent(context, ScreenCaptureActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("targetText", targetText)
             putExtra("isRegex", isRegex)
             putExtra("pendingIntent", pendingIntent)

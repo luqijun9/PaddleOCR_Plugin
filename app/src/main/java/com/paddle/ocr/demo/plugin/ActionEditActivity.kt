@@ -2,15 +2,22 @@ package com.paddle.ocr.demo.plugin
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
+import android.view.View
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.LinearLayout
 import com.paddle.ocr.demo.R
 
 class ActionEditActivity : Activity() {
 
     private lateinit var editTargetText: EditText
     private lateinit var checkIsRegex: CheckBox
+    private lateinit var layoutOverlayWarning: LinearLayout
+    private lateinit var btnGrantOverlay: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -18,6 +25,18 @@ class ActionEditActivity : Activity() {
 
         editTargetText = findViewById(R.id.editTargetText)
         checkIsRegex = findViewById(R.id.checkIsRegex)
+        layoutOverlayWarning = findViewById(R.id.layoutOverlayWarning)
+        btnGrantOverlay = findViewById(R.id.btnGrantOverlay)
+
+        btnGrantOverlay.setOnClickListener {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
+        }
+
+        checkOverlayPermission()
 
         // Read existing bundle if editing
         var instanceId: String? = null
@@ -32,6 +51,19 @@ class ActionEditActivity : Activity() {
         
         if (instanceId == null) {
             instanceId = java.util.UUID.randomUUID().toString()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkOverlayPermission()
+    }
+
+    private fun checkOverlayPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            layoutOverlayWarning.visibility = View.VISIBLE
+        } else {
+            layoutOverlayWarning.visibility = View.GONE
         }
     }
 
