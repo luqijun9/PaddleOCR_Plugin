@@ -89,14 +89,16 @@ class ActionEditActivity : ComponentActivity() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             FloatingSelectionService.screenshotCallback = {
-                val intent = Intent(this, RegionDrawActivity::class.java).apply {
-                    putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, pendingRestrictRegion)
-                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, pendingRegionLeft)
-                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, pendingRegionTop)
-                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, pendingRegionRight)
-                    putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, pendingRegionBottom)
+                runOnUiThread {
+                    val intent = Intent(this, RegionDrawActivity::class.java).apply {
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, pendingRestrictRegion)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, pendingRegionLeft)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, pendingRegionTop)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, pendingRegionRight)
+                        putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, pendingRegionBottom)
+                    }
+                    regionDrawLauncher.launch(intent)
                 }
-                regionDrawLauncher.launch(intent)
             }
             val serviceIntent = Intent(this, FloatingSelectionService::class.java).apply {
                 putExtra("resultCode", result.resultCode)
@@ -107,6 +109,8 @@ class ActionEditActivity : ComponentActivity() {
             } else {
                 startService(serviceIntent)
             }
+            Toast.makeText(this, getString(R.string.floating_service_toast_hint), Toast.LENGTH_LONG).show()
+            moveTaskToBack(true)
         }
     }
 

@@ -136,68 +136,89 @@ class FloatingSelectionService : Service() {
     private fun captureAndOpenDrawActivity() {
         floatingView?.visibility = View.GONE
 
-        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        mediaProjection = projectionManager.getMediaProjection(resultCode, resultData!!)
+        try {
+            val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            mediaProjection = projectionManager.getMediaProjection(resultCode, resultData!!)
 
-        val metrics = DisplayMetrics()
-        windowManager?.defaultDisplay?.getRealMetrics(metrics)
-        val width = metrics.widthPixels
-        val height = metrics.heightPixels
-        val density = metrics.densityDpi
+            mediaProjection?.registerCallback(object : MediaProjection.Callback() {
+                override fun onStop() {
+                    super.onStop()
+                }
+            }, null)
 
-        imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+            val metrics = DisplayMetrics()
+            windowManager?.defaultDisplay?.getRealMetrics(metrics)
+            val width = metrics.widthPixels
+            val height = metrics.heightPixels
+            val density = metrics.densityDpi
 
-        val virtualDisplay = mediaProjection?.createVirtualDisplay(
-            "ScreenCapture",
-            width, height, density,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            imageReader?.surface, null, null
-        )
+            imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
 
-        imageReader?.setOnImageAvailableListener({ reader ->
-            val image: Image? = try {
-                reader.acquireLatestImage()
-            } catch (e: Exception) {
-                null
-            }
+            val virtualDisplay = mediaProjection?.createVirtualDisplay(
+                "ScreenCapture",
+                width, height, density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader?.surface, null, null
+            )
 
-            if (image != null) {
-                imageReader?.setOnImageAvailableListener(null, null)
-                val planes = image.planes
-                val buffer = planes[0].buffer
-                val pixelStride = planes[0].pixelStride
-                val rowStride = planes[0].rowStride
-                val rowPadding = rowStride - pixelStride * width
+            imageReader?.setOnImageAvailableListener({ reader ->
+                val image: Image? = try {
+                    reader.acquireLatestImage()
+                } catch (e: Exception) {
+                    null
+                }
 
-                val bitmap = Bitmap.createBitmap(
-                    width + rowPadding / pixelStride,
-                    height,
-                    Bitmap.Config.ARGB_8888
-                )
-                bitmap.copyPixelsFromBuffer(buffer)
-                val croppedBitmap = if (rowPadding == 0) {
-                    bitmap
+                if (image != null) {
+                    imageReader?.setOnImageAvailableListener(null, null)
+                    val planes = image.planes
+                    val buffer = planes[0].buffer
+                    val pixelStride = planes[0].pixelStride
+                    val rowStride = planes[0].rowStride
+                    val rowPadding = rowStride - pixelStride * width
+
+                    val bitmap = Bitmap.createBitmap(
+                        width + rowPadding / pixelStride,
+                        height,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    bitmap.copyPixelsFromBuffer(buffer)
+                    val croppedBitmap = if (rowPadding == 0) {
+                        bitmap
+                    } else {
+                        val cropped = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                        bitmap.recycle()
+                        cropped
+                    }
+                    image.close()
+
+                    captureBitmap = croppedBitmap
+
+                    virtualDisplay?.release()
+                    mediaProjection?.stop()
+
+                    val cb = screenshotCallback
+                    screenshotCallback = null
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        cb?.invoke()
+                    }
+
+                    stopSelf()
                 } else {
-                    val cropped = Bitmap.createBitmap(bitmap, 0, 0, width, height)
-                    bitmap.recycle()
-                    cropped
+                    Log.e(TAG, "Acquired image was null in FloatingSelectionService")
+                    stopSelf()
                 }
-                image.close()
-
-                captureBitmap = croppedBitmap
-
-                virtualDisplay?.release()
-                mediaProjection?.stop()
-
-                val cb = screenshotCallback
-                screenshotCallback = null
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    cb?.invoke()
-                }
-
-                stopSelf()
+            }, null)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during captureAndOpenDrawActivity: ${e.message}", e)
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(
+                    this,
+                    "截屏失败: ${e.message ?: "未知异常"}",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
             }
-        }, null)
+            stopSelf()
+        }
     }
 
     private fun createNotificationChannel() {
