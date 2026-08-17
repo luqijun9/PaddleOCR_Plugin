@@ -63,16 +63,9 @@ class RegionDrawActivity : ComponentActivity() {
             return
         }
 
-        val initialRestrictRegion = intent.getBooleanExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, false)
-        val initialLeft = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT)?.toFloatOrNull() ?: 0.0f
-        val initialTop = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP)?.toFloatOrNull() ?: 0.0f
-        val initialRight = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT)?.toFloatOrNull() ?: 1.0f
-        val initialBottom = intent.getStringExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM)?.toFloatOrNull() ?: 1.0f
-
         setContent {
             PPOCRTheme {
                 var selectionRect by remember { mutableStateOf<Rect?>(null) }
-                var isInitialized by remember { mutableStateOf(false) }
                 var containerSize by remember { mutableStateOf(Size.Zero) }
 
                 var activeHandle by remember { mutableStateOf(CropHandle.NONE) }
@@ -205,16 +198,6 @@ class RegionDrawActivity : ComponentActivity() {
                             }
                     ) {
                         containerSize = size
-                        if (!isInitialized && size.width > 0 && size.height > 0) {
-                            isInitialized = true
-                            if (initialRestrictRegion && initialRight > initialLeft && initialBottom > initialTop) {
-                                val l = (initialLeft.coerceIn(0f, 1f) * size.width)
-                                val t = (initialTop.coerceIn(0f, 1f) * size.height)
-                                val r = (initialRight.coerceIn(0f, 1f) * size.width)
-                                val b = (initialBottom.coerceIn(0f, 1f) * size.height)
-                                selectionRect = Rect(l, t, r, b)
-                            }
-                        }
 
                         // 绘制截屏背景
                         drawImage(
