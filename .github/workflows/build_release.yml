@@ -2,11 +2,8 @@ name: Build & Release Multi-Model APKs
 
 on:
   push:
-    branches: [ "main", "master" ]
     tags:
       - "*"
-  release:
-    types: [ published ]
   workflow_dispatch:
 
 permissions:
