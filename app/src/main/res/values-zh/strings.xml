@@ -38,7 +38,7 @@
     <string name="switch_restrict_region">启用识别区域限制</string>
     <string name="desc_restrict_region">仅识别屏幕指定框选区域，大幅降低耗时并防止误触</string>
     <string name="region_draw">屏幕画框选区</string>
-    <string name="region_draw_current_img">在当前图片上重新框选</string>
+    <string name="region_draw_current_img">在当前图片上框选</string>
     <string name="region_draw_new_screen">重新截屏画框</string>
     <string name="region_not_configured">尚未设定局部选区，点击下方按钮开始框选</string>
     <string name="region_full_image_fmt">全图尺寸: %1$d x %2$d 像素</string>

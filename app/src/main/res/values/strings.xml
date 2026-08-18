@@ -38,7 +38,7 @@
     <string name="switch_restrict_region">Enable Region Restriction</string>
     <string name="desc_restrict_region">Only recognize within specified screen region, speeding up OCR and avoiding misclicks</string>
     <string name="region_draw">Draw Region on Screen</string>
-    <string name="region_draw_current_img">Redraw Region on Current Image</string>
+    <string name="region_draw_current_img">Draw Region on Current Image</string>
     <string name="region_draw_new_screen">New Screen Capture &amp; Draw</string>
     <string name="region_not_configured">No custom region configured. Tap below to draw.</string>
     <string name="region_full_image_fmt">Full Image Size: %1$d x %2$d px</string>

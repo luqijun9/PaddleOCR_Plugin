@@ -16,8 +16,8 @@ android {
         applicationId = "com.paddle.ocr.demo"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
         val isSplit = project.hasProperty("splitApks") || System.getenv("SPLIT_APKS") == "true"
         if (!isSplit) {
