@@ -21,7 +21,11 @@ import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
+import android.graphics.drawable.GradientDrawable
+import android.view.MotionEvent
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import com.paddle.ocr.demo.R
 
 class FloatingSelectionService : Service() {
@@ -88,19 +92,53 @@ class FloatingSelectionService : Service() {
         return START_NOT_STICKY
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun showFloatingWindow() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-        floatingView = Button(this).apply {
-            text = getString(R.string.floating_service_capture_btn)
-            textSize = 16f
-            setBackgroundColor(android.graphics.Color.parseColor("#CC1976D2"))
-            setTextColor(android.graphics.Color.WHITE)
-            setPadding(36, 28, 36, 28)
-            setOnClickListener {
-                captureAndOpenDrawActivity()
+        val density = resources.displayMetrics.density
+        fun dp(value: Float) = (value * density).toInt()
+
+        // 现代化圆角胶囊悬浮容器
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16f), dp(10f), dp(18f), dp(10f))
+
+            val shape = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(24f).toFloat()
+                setColor(android.graphics.Color.parseColor("#EE1E293B")) // 深色科技灰
+                setStroke(dp(1.5f), android.graphics.Color.parseColor("#38BDF8")) // 科技天蓝高亮边框
+            }
+            background = shape
+            elevation = dp(8f).toFloat()
+        }
+
+        // 截图图标
+        val iconView = ImageView(this).apply {
+            setImageResource(android.R.drawable.ic_menu_crop)
+            setColorFilter(android.graphics.Color.parseColor("#38BDF8"))
+            layoutParams = LinearLayout.LayoutParams(dp(20f), dp(20f)).apply {
+                marginEnd = dp(8f)
             }
         }
+        container.addView(iconView)
+
+        // 文本提示
+        val textView = TextView(this).apply {
+            text = getString(R.string.floating_service_capture_btn)
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(android.graphics.Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        container.addView(textView)
+
+        floatingView = container
 
         val layoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -114,8 +152,48 @@ class FloatingSelectionService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 80
-            y = 300
+            x = dp(24f)
+            y = dp(160f)
+        }
+
+        // 自由拖拽与点击判定
+        var initialX = 0
+        var initialY = 0
+        var initialTouchX = 0f
+        var initialTouchY = 0f
+        val touchSlop = dp(6f)
+
+        container.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialX = layoutParams.x
+                    initialY = layoutParams.y
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = (event.rawX - initialTouchX).toInt()
+                    val dy = (event.rawY - initialTouchY).toInt()
+                    layoutParams.x = initialX + dx
+                    layoutParams.y = initialY + dy
+                    try {
+                        windowManager?.updateViewLayout(container, layoutParams)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "updateViewLayout notice: ${e.message}")
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    val dx = Math.abs(event.rawX - initialTouchX)
+                    val dy = Math.abs(event.rawY - initialTouchY)
+                    if (dx < touchSlop && dy < touchSlop) {
+                        captureAndOpenDrawActivity()
+                    }
+                    true
+                }
+                else -> false
+            }
         }
 
         try {
@@ -124,7 +202,7 @@ class FloatingSelectionService : Service() {
                 android.widget.Toast.makeText(
                     this,
                     getString(R.string.floating_service_toast_hint),
-                    android.widget.Toast.LENGTH_LONG
+                    android.widget.Toast.LENGTH_SHORT
                 ).show()
             }
         } catch (e: Exception) {

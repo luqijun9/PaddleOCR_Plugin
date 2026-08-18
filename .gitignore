@@ -90,3 +90,5 @@ secrets.properties
 # Model
 !ppocr-sdk/src/main/assets/models/**
 
+time.txt
+

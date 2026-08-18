@@ -26,6 +26,7 @@ object TaskerPluginConstants {
     const val BUNDLE_KEY_REGION_TOP = "region_top"
     const val BUNDLE_KEY_REGION_RIGHT = "region_right"
     const val BUNDLE_KEY_REGION_BOTTOM = "region_bottom"
+    const val BUNDLE_KEY_REGION_PREVIEW_FILE = "region_preview_file"
 
     // Image source options
     const val IMAGE_SOURCE_SCREEN_CAPTURE = "screen_capture"

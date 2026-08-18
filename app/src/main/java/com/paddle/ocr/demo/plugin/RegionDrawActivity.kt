@@ -2,7 +2,10 @@ package com.paddle.ocr.demo.plugin
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
+import java.io.File
+import java.io.FileOutputStream
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -280,12 +283,33 @@ class RegionDrawActivity : ComponentActivity() {
                                     val right = (rect.right / containerSize.width).coerceIn(0f, 1f)
                                     val bottom = (rect.bottom / containerSize.height).coerceIn(0f, 1f)
 
-                                    val resultIntent = Intent().apply {
-                                        putExtra("REGION_RESULT", floatArrayOf(left, top, right, bottom))
+                                    val previewFileName = "preview_${System.currentTimeMillis()}.jpg"
+                                    try {
+                                        val previewsDir = File(filesDir, "previews").apply { mkdirs() }
+                                        val previewFile = File(previewsDir, previewFileName)
+                                        val origW = bitmap.width
+                                        val origH = bitmap.height
+                                        val targetH = 640
+                                        val targetW = (origW.toFloat() / origH.toFloat() * targetH).toInt().coerceAtLeast(1)
+                                        val thumbBitmap = Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
+                                        FileOutputStream(previewFile).use { out ->
+                                            thumbBitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                                        }
+                                        if (thumbBitmap != bitmap) {
+                                            thumbBitmap.recycle()
+                                        }
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("RegionDraw", "Failed to save preview thumbnail: ${e.message}")
                                     }
                                     FloatingSelectionService.captureBitmap = null
+
+                                    val resultIntent = Intent().apply {
+                                        putExtra("REGION_RESULT", floatArrayOf(left, top, right, bottom))
+                                        putExtra("REGION_PREVIEW_FILE", previewFileName)
+                                    }
                                     setResult(Activity.RESULT_OK, resultIntent)
                                 } else {
+                                    FloatingSelectionService.captureBitmap = null
                                     setResult(Activity.RESULT_CANCELED)
                                 }
                                 finish()

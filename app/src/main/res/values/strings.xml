@@ -18,7 +18,7 @@
     <string name="section_image_path">Image File Path</string>
     <string name="label_image_path">Absolute Path or Uri</string>
     <string name="placeholder_image_path">/sdcard/Pictures/xxx.jpg or %img_path</string>
-    <string name="supporting_image_path">Supports Tasker/MacroDroid variables (e.g. %photo_path or [lv=img])</string>
+    <string name="supporting_image_path">Supports Tasker/MacroDroid variables (e.g. %photo_path or [lv=img]). When selecting via Browse without all-files permission, it may appear as system URI format (e.g. content://...)</string>
     <string name="btn_browse_files">Browse Files (File Manager)</string>
     <string name="section_target_text">Target Match Text (Optional)</string>
     <string name="label_target_text">Target Text / Keyword</string>
@@ -36,10 +36,14 @@
     <string name="switch_restrict_region">Enable Region Restriction</string>
     <string name="desc_restrict_region">Only recognize within specified screen region, speeding up OCR and avoiding misclicks</string>
     <string name="region_draw">Draw Region on Screen</string>
+    <string name="region_draw_current_img">Draw Region on Current Image</string>
+    <string name="region_draw_new_screen">New Screen Capture &amp; Draw</string>
+    <string name="region_not_configured">No custom region configured. Tap below to draw.</string>
+    <string name="region_full_image_fmt">Full Image Size: %1$d x %2$d px</string>
     <string name="region_draw_confirm">Confirm Region</string>
     <string name="region_draw_cancel">Cancel</string>
     <string name="region_pixel_range_fmt">Region Pixels: X (%1$d ~ %2$d), Y (%3$d ~ %4$d)</string>
-    <string name="region_pixel_size_fmt">Size: %1$d x %2$d px (Screen: %3$d x %4$d)</string>
+    <string name="region_pixel_size_fmt">Region Size: %1$d x %2$d px (Source: %3$d x %4$d)</string>
     <string name="region_advanced_show_px">Expand Pixel Fine-Tuning</string>
     <string name="region_advanced_hide_px">Collapse Pixel Fine-Tuning</string>
     <string name="region_left_px">Left (px)</string>
@@ -47,7 +51,7 @@
     <string name="region_right_px">Right (px)</string>
     <string name="region_bottom_px">Bottom (px)</string>
     <string name="floating_service_capture_btn">Tap to Capture Region</string>
-    <string name="floating_service_toast_hint">Switch to target screen first, then tap the floating button to draw region</string>
+    <string name="floating_service_toast_hint">Switch to target screen before tapping capture</string>
     <string name="floating_service_notification_title">OCR Region Selection</string>
     <string name="floating_service_notification_desc">Floating window active, tap the button to capture and draw</string>
     <string name="section_output_variables">Output Variables</string>
@@ -57,7 +61,24 @@
     <string name="var_desc_match_center_x">Matched text center X coordinate (pixels)</string>
     <string name="var_desc_match_center_y">Matched text center Y coordinate (pixels)</string>
     <string name="var_desc_errmsg">Error description on failure</string>
+    <string name="btn_cancel">Cancel</string>
     <string name="btn_clear">Clear</string>
+
+    <!-- Tasker Blurb & Variables -->
+    <string name="blurb_file_find_fmt">File [%1$s] Find: %2$s</string>
+    <string name="blurb_file_ocr_fmt">Recognize File: %1$s</string>
+    <string name="blurb_screen_find_fmt">Screen Find: %1$s</string>
+    <string name="blurb_screen_ocr">Recognize Screen Text</string>
+    <string name="blurb_a11y_find_fmt">Accessibility Find: %1$s</string>
+    <string name="blurb_a11y_ocr">Accessibility Full Screen OCR</string>
+    <string name="blurb_region_suffix">(Region Restrict)</string>
+
+    <string name="var_label_full_text">Full Text</string>
+    <string name="var_label_json">JSON Format Results</string>
+    <string name="var_label_match_found">Target Matched</string>
+    <string name="var_label_match_center_x">Target Center X</string>
+    <string name="var_label_match_center_y">Target Center Y</string>
+    <string name="var_label_errmsg">Error Message</string>
 
     <!-- Permission Check Cards -->
     <string name="perm_storage_title">All Files Access Recommended</string>

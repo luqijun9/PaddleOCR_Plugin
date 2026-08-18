@@ -3,6 +3,7 @@ package com.paddle.ocr.demo.plugin
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
@@ -18,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,13 +35,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -47,9 +52,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.paddle.ocr.demo.R
 import com.paddle.ocr.demo.ui.theme.PPOCRTheme
+import java.io.File
+import android.graphics.BitmapFactory
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.util.UUID
+import kotlinx.coroutines.launch
 
 class ActionEditActivity : ComponentActivity() {
 
@@ -64,9 +72,11 @@ class ActionEditActivity : ComponentActivity() {
     private var initialRegionTop: String = "0.0"
     private var initialRegionRight: String = "1.0"
     private var initialRegionBottom: String = "1.0"
+    private var initialRegionPreviewFile: String = ""
     private var instanceId: String = ""
 
     private val regionResultFlow = MutableStateFlow<FloatArray?>(null)
+    private val regionPreviewFlow = MutableStateFlow<String?>(null)
     private var pendingRestrictRegion = false
     private var pendingRegionLeft = "0.0"
     private var pendingRegionTop = "0.0"
@@ -78,8 +88,12 @@ class ActionEditActivity : ComponentActivity() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val coords = result.data?.getFloatArrayExtra("REGION_RESULT")
+            val previewFile = result.data?.getStringExtra("REGION_PREVIEW_FILE")
             if (coords != null && coords.size == 4) {
                 regionResultFlow.value = coords
+            }
+            if (!previewFile.isNullOrEmpty()) {
+                regionPreviewFlow.value = previewFile
             }
         }
     }
@@ -109,7 +123,6 @@ class ActionEditActivity : ComponentActivity() {
             } else {
                 startService(serviceIntent)
             }
-            Toast.makeText(this, getString(R.string.floating_service_toast_hint), Toast.LENGTH_LONG).show()
             moveTaskToBack(true)
         }
     }
@@ -141,9 +154,29 @@ class ActionEditActivity : ComponentActivity() {
         mediaProjectionLauncher.launch(mgr.createScreenCaptureIntent())
     }
 
+    private fun requestInPlaceRegionDraw(
+        bitmap: Bitmap,
+        restrict: Boolean,
+        left: String,
+        top: String,
+        right: String,
+        bottom: String
+    ) {
+        FloatingSelectionService.captureBitmap = bitmap
+        val intent = Intent(this, RegionDrawActivity::class.java).apply {
+            putExtra(TaskerPluginConstants.BUNDLE_KEY_RESTRICT_REGION, restrict)
+            putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT, left)
+            putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, top)
+            putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, right)
+            putExtra(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, bottom)
+        }
+        regionDrawLauncher.launch(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        PluginKeepAliveService.start(this)
 
         // 读取已有配置
         if (intent.action == TaskerPluginConstants.ACTION_EDIT_SETTING) {
@@ -163,6 +196,7 @@ class ActionEditActivity : ComponentActivity() {
                 initialRegionTop = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, "0.0")
                 initialRegionRight = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, "1.0")
                 initialRegionBottom = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, "1.0")
+                initialRegionPreviewFile = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_PREVIEW_FILE, "")
                 instanceId = bundle.getString("plugin_instance_id") ?: UUID.randomUUID().toString()
             }
         }
@@ -184,11 +218,16 @@ class ActionEditActivity : ComponentActivity() {
                     initialRegionTop = initialRegionTop,
                     initialRegionRight = initialRegionRight,
                     initialRegionBottom = initialRegionBottom,
+                    initialRegionPreviewFile = initialRegionPreviewFile,
                     regionResultFlow = regionResultFlow,
+                    regionPreviewFlow = regionPreviewFlow,
                     onLaunchScreenCapture = { restrict, left, top, right, bottom ->
                         requestRegionScreenCapture(restrict, left, top, right, bottom)
                     },
-                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom ->
+                    onLaunchInPlaceRegionDraw = { bitmap, restrict, left, top, right, bottom ->
+                        requestInPlaceRegionDraw(bitmap, restrict, left, top, right, bottom)
+                    },
+                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom, regionPreviewFile ->
                         saveAndFinish(
                             imageSource,
                             imagePath,
@@ -200,7 +239,8 @@ class ActionEditActivity : ComponentActivity() {
                             regionLeft,
                             regionTop,
                             regionRight,
-                            regionBottom
+                            regionBottom,
+                            regionPreviewFile
                         )
                     },
                     onCancel = {
@@ -222,7 +262,8 @@ class ActionEditActivity : ComponentActivity() {
         regionLeft: String,
         regionTop: String,
         regionRight: String,
-        regionBottom: String
+        regionBottom: String,
+        regionPreviewFile: String
     ) {
         val resultIntent = Intent()
         val resultBundle = Bundle().apply {
@@ -237,35 +278,51 @@ class ActionEditActivity : ComponentActivity() {
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, regionTop)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, regionRight)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, regionBottom)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_PREVIEW_FILE, regionPreviewFile)
             putString("plugin_instance_id", instanceId)
         }
 
-        // 设置在 Tasker/MacroDroid 动作列表里显示的摘要 (Blurb)
+        // 设置在 Tasker/MacroDroid 动作列表里显示的摘要 (Blurb，全多语言自适应)
         val blurb = buildString {
             when (imageSource) {
                 TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH -> {
-                    val fileName = imagePath.substringAfterLast('/').ifEmpty { "本地图片" }
-                    if (targetText.isNotEmpty()) append("文件[$fileName] 查找: $targetText") else append("识别文件: $fileName")
+                    val fileName = imagePath.substringAfterLast('/').ifEmpty { getString(R.string.source_local_file) }
+                    if (targetText.isNotEmpty()) {
+                        append(getString(R.string.blurb_file_find_fmt, fileName, targetText))
+                    } else {
+                        append(getString(R.string.blurb_file_ocr_fmt, fileName))
+                    }
+                }
+                TaskerPluginConstants.IMAGE_SOURCE_ACCESSIBILITY -> {
+                    if (targetText.isNotEmpty()) {
+                        append(getString(R.string.blurb_a11y_find_fmt, targetText))
+                    } else {
+                        append(getString(R.string.blurb_a11y_ocr))
+                    }
                 }
                 else -> {
-                    if (targetText.isNotEmpty()) append("屏幕查找: $targetText") else append("识别全屏文字")
+                    if (targetText.isNotEmpty()) {
+                        append(getString(R.string.blurb_screen_find_fmt, targetText))
+                    } else {
+                        append(getString(R.string.blurb_screen_ocr))
+                    }
                 }
             }
             if (restrictRegion) {
-                append(" (区域限制)")
+                append(" " + getString(R.string.blurb_region_suffix))
             }
         }
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_STRING_BLURB, blurb)
         resultIntent.putExtra(TaskerPluginConstants.EXTRA_BUNDLE, resultBundle)
 
-        // 注册回传变量
+        // 注册回传变量 (多语言动态本地化)
         val variables = arrayOf(
-            "%ocr_full_text\n全量文本\n包含所有拼在一起的文本结果",
-            "%ocr_json\nJSON格式结果\n包含每个文本块坐标的JSON数组",
-            "%match_found\n是否找到目标文本\ntrue 或 false",
-            "%match_center_x\n目标X坐标\n匹配文本的中心点X轴坐标",
-            "%match_center_y\n目标Y坐标\n匹配文本的中心点Y轴坐标",
-            "%errmsg\n错误信息\n执行失败或异常时的错误描述"
+            "%ocr_full_text\n${getString(R.string.var_label_full_text)}\n${getString(R.string.var_desc_full_text)}",
+            "%ocr_json\n${getString(R.string.var_label_json)}\n${getString(R.string.var_desc_json)}",
+            "%match_found\n${getString(R.string.var_label_match_found)}\n${getString(R.string.var_desc_match_found)}",
+            "%match_center_x\n${getString(R.string.var_label_match_center_x)}\n${getString(R.string.var_desc_match_center_x)}",
+            "%match_center_y\n${getString(R.string.var_label_match_center_y)}\n${getString(R.string.var_desc_match_center_y)}",
+            "%errmsg\n${getString(R.string.var_label_errmsg)}\n${getString(R.string.var_desc_errmsg)}"
         )
         TaskerPlugin.addRelevantVariableList(resultIntent, variables)
 
@@ -306,9 +363,12 @@ fun ActionEditScreen(
     initialRegionTop: String,
     initialRegionRight: String,
     initialRegionBottom: String,
+    initialRegionPreviewFile: String,
     regionResultFlow: StateFlow<FloatArray?>,
+    regionPreviewFlow: StateFlow<String?>,
     onLaunchScreenCapture: (Boolean, String, String, String, String) -> Unit,
-    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String) -> Unit,
+    onLaunchInPlaceRegionDraw: (Bitmap, Boolean, String, String, String, String) -> Unit,
+    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String, String) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
@@ -323,6 +383,11 @@ fun ActionEditScreen(
     var regionTop by remember { mutableStateOf(initialRegionTop) }
     var regionRight by remember { mutableStateOf(initialRegionRight) }
     var regionBottom by remember { mutableStateOf(initialRegionBottom) }
+    var regionPreviewFile by remember { mutableStateOf(initialRegionPreviewFile) }
+
+    val initialHasCustomRegion = initialRestrictRegion &&
+            !(initialRegionLeft == "0.0" && initialRegionTop == "0.0" && initialRegionRight == "1.0" && initialRegionBottom == "1.0")
+    var hasCustomRegion by remember { mutableStateOf(initialHasCustomRegion) }
 
     val regionResult by regionResultFlow.collectAsState()
     LaunchedEffect(regionResult) {
@@ -331,8 +396,50 @@ fun ActionEditScreen(
             regionTop = String.format(java.util.Locale.US, "%.4f", it[1])
             regionRight = String.format(java.util.Locale.US, "%.4f", it[2])
             regionBottom = String.format(java.util.Locale.US, "%.4f", it[3])
+            hasCustomRegion = true
         }
     }
+
+    val newPreviewFile by regionPreviewFlow.collectAsState()
+    LaunchedEffect(newPreviewFile) {
+        newPreviewFile?.let {
+            if (it.isNotEmpty()) {
+                regionPreviewFile = it
+            }
+        }
+    }
+
+    var localImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(imageSource, imagePath, restrictRegion) {
+        if (restrictRegion && imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH && imagePath.isNotBlank()) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val res = ImageFileLoader.loadBitmap(context, imagePath, maxDimension = 640)
+                localImageBitmap = (res as? ImageLoadResult.Success)?.bitmap
+            }
+        } else {
+            localImageBitmap = null
+        }
+    }
+
+    val currentBitmap = remember(imageSource, restrictRegion, regionPreviewFile, localImageBitmap) {
+        if (!restrictRegion) {
+            null
+        } else if (imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH) {
+            localImageBitmap
+        } else if (regionPreviewFile.isNotEmpty()) {
+            val file = File(context.filesDir, "previews/$regionPreviewFile")
+            if (file.exists()) {
+                BitmapFactory.decodeFile(file.absolutePath)
+            } else {
+                null
+            }
+        } else {
+            null
+        }
+    }
+
+    val coroutineScope = rememberCoroutineScope()
 
     // 系统文件管理器 (DocumentsUI) 选择器 Launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -349,9 +456,12 @@ fun ActionEditScreen(
                 } catch (e: Exception) {
                     android.util.Log.w("OcrPlugin", "takePersistableUriPermission notice: ${e.message}")
                 }
-                // 转换为真实物理路径 (如 /storage/emulated/0/Pictures/xxx.jpg)
                 val realPath = UriPathUtils.getRealPathFromUri(context, uri)
                 imagePath = realPath
+                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val res = ImageFileLoader.loadBitmap(context, realPath, maxDimension = 640)
+                    localImageBitmap = (res as? ImageLoadResult.Success)?.bitmap
+                }
             }
         }
     }
@@ -369,7 +479,8 @@ fun ActionEditScreen(
             regionLeft,
             regionTop,
             regionRight,
-            regionBottom
+            regionBottom,
+            regionPreviewFile
         )
     }
 
@@ -387,7 +498,7 @@ fun ActionEditScreen(
                     IconButton(onClick = onCancel) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.btn_clear)
+                            contentDescription = stringResource(R.string.btn_cancel)
                         )
                     }
                 },
@@ -404,7 +515,8 @@ fun ActionEditScreen(
                             regionLeft,
                             regionTop,
                             regionRight,
-                            regionBottom
+                            regionBottom,
+                            regionPreviewFile
                         )
                     }) {
                         Icon(
@@ -436,7 +548,7 @@ fun ActionEditScreen(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(stringResource(R.string.btn_clear))
+                        Text(stringResource(R.string.btn_cancel))
                     }
                     Button(
                         onClick = {
@@ -451,7 +563,8 @@ fun ActionEditScreen(
                                 regionLeft,
                                 regionTop,
                                 regionRight,
-                                regionBottom
+                                regionBottom,
+                                regionPreviewFile
                             )
                         },
                         modifier = Modifier.weight(1f),
@@ -817,13 +930,27 @@ fun ActionEditScreen(
                         val rightVal = regionRight.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
                         val bottomVal = regionBottom.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
 
-                        val leftPx = (leftVal * screenW).toInt()
-                        val topPx = (topVal * screenH).toInt()
-                        val rightPx = (rightVal * screenW).toInt()
-                        val bottomPx = (bottomVal * screenH).toInt()
+                        val baseW = if (currentBitmap != null && !currentBitmap.isRecycled) currentBitmap.width else screenW
+                        val baseH = if (currentBitmap != null && !currentBitmap.isRecycled) currentBitmap.height else screenH
+
+                        val leftPx = (leftVal * baseW).toInt()
+                        val topPx = (topVal * baseH).toInt()
+                        val rightPx = (rightVal * baseW).toInt()
+                        val bottomPx = (bottomVal * baseH).toInt()
 
                         val widthPx = (rightPx - leftPx).coerceAtLeast(0)
                         val heightPx = (bottomPx - topPx).coerceAtLeast(0)
+
+                        val screenRatio = if (currentBitmap != null && !currentBitmap.isRecycled) {
+                            currentBitmap.width.toFloat() / currentBitmap.height.toFloat()
+                        } else if (screenH > 0) {
+                            screenW.toFloat() / screenH.toFloat()
+                        } else {
+                            9f / 16f
+                        }
+
+                        val previewHeightDp = 220.dp
+                        val previewWidthDp = previewHeightDp * screenRatio
 
                         // 迷你全屏示意缩略图
                         Column(
@@ -838,57 +965,141 @@ fun ActionEditScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .width(90.dp)
-                                    .height(160.dp)
-                                    .background(Color(0xFF202124), RoundedCornerShape(6.dp))
+                                    .width(previewWidthDp)
+                                    .height(previewHeightDp)
+                                    .background(Color(0xFF202124), RoundedCornerShape(8.dp))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                             ) {
                                 Canvas(modifier = Modifier.fillMaxSize()) {
-                                    drawRect(
-                                        color = Color(0xFF00E676).copy(alpha = 0.3f),
-                                        topLeft = Offset(leftVal * size.width, topVal * size.height),
-                                        size = Size((rightVal - leftVal).coerceAtLeast(0f) * size.width, (bottomVal - topVal).coerceAtLeast(0f) * size.height)
-                                    )
-                                    drawRect(
-                                        color = Color(0xFF00E676),
-                                        topLeft = Offset(leftVal * size.width, topVal * size.height),
-                                        size = Size((rightVal - leftVal).coerceAtLeast(0f) * size.width, (bottomVal - topVal).coerceAtLeast(0f) * size.height),
-                                        style = Stroke(width = 2f)
-                                    )
+                                    if (currentBitmap != null && !currentBitmap.isRecycled) {
+                                        drawImage(
+                                            image = currentBitmap.asImageBitmap(),
+                                            dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                                        )
+                                    } else {
+                                        drawRect(color = Color(0xFF202124))
+                                    }
+
+                                    // 仅在用户实际画框或微调设定了局部选区后才绘制高亮绿框
+                                    if (hasCustomRegion) {
+                                        val l = leftVal * size.width
+                                        val t = topVal * size.height
+                                        val w = (rightVal - leftVal).coerceAtLeast(0f) * size.width
+                                        val h = (bottomVal - topVal).coerceAtLeast(0f) * size.height
+
+                                        if (w > 0f && h > 0f) {
+                                            drawRect(
+                                                color = Color(0xFF00E676).copy(alpha = 0.30f),
+                                                topLeft = Offset(l, t),
+                                                size = Size(w, h)
+                                            )
+                                            drawRect(
+                                                color = Color(0xFF00E676),
+                                                topLeft = Offset(l, t),
+                                                size = Size(w, h),
+                                                style = Stroke(width = 3f)
+                                            )
+                                        }
+                                    }
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            Text(
-                                text = stringResource(R.string.region_pixel_range_fmt, leftPx, rightPx, topPx, bottomPx),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.region_pixel_size_fmt, widthPx, heightPx, screenW, screenH),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            if (hasCustomRegion) {
+                                Text(
+                                    text = stringResource(R.string.region_pixel_range_fmt, leftPx, rightPx, topPx, bottomPx),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(R.string.region_pixel_size_fmt, widthPx, heightPx, baseW, baseH),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(R.string.region_not_configured),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = stringResource(R.string.region_full_image_fmt, baseW, baseH),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
 
-                        // 屏幕画框选区主按钮
-                        Button(
-                            onClick = { onLaunchScreenCapture(restrictRegion, regionLeft, regionTop, regionRight, regionBottom) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.region_draw), fontWeight = FontWeight.Bold)
+                        // 双按钮协同布局：在当前底图上重新框选 vs 截取新屏幕画框 (上下垂直排列)
+                        if (currentBitmap != null && !currentBitmap.isRecycled) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        onLaunchInPlaceRegionDraw(
+                                            currentBitmap,
+                                            restrictRegion,
+                                            regionLeft,
+                                            regionTop,
+                                            regionRight,
+                                            regionBottom
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.region_draw_current_img), fontWeight = FontWeight.Bold)
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        onLaunchScreenCapture(
+                                            restrictRegion,
+                                            regionLeft,
+                                            regionTop,
+                                            regionRight,
+                                            regionBottom
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(stringResource(R.string.region_draw_new_screen), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    onLaunchScreenCapture(
+                                        restrictRegion,
+                                        regionLeft,
+                                        regionTop,
+                                        regionRight,
+                                        regionBottom
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.region_draw), fontWeight = FontWeight.Bold)
+                            }
                         }
 
                         // 可折叠高级像素手动微调
                         var showAdvancedInput by remember { mutableStateOf(false) }
-                        var pxLeftText by remember(regionLeft, screenW) { mutableStateOf(leftPx.toString()) }
-                        var pxTopText by remember(regionTop, screenH) { mutableStateOf(topPx.toString()) }
-                        var pxRightText by remember(regionRight, screenW) { mutableStateOf(rightPx.toString()) }
-                        var pxBottomText by remember(regionBottom, screenH) { mutableStateOf(bottomPx.toString()) }
+                        var pxLeftText by remember(regionLeft, baseW) { mutableStateOf(leftPx.toString()) }
+                        var pxTopText by remember(regionTop, baseH) { mutableStateOf(topPx.toString()) }
+                        var pxRightText by remember(regionRight, baseW) { mutableStateOf(rightPx.toString()) }
+                        var pxBottomText by remember(regionBottom, baseH) { mutableStateOf(bottomPx.toString()) }
 
                         TextButton(
                             onClick = { showAdvancedInput = !showAdvancedInput },
@@ -905,8 +1116,9 @@ fun ActionEditScreen(
                                         onValueChange = { input ->
                                             pxLeftText = input
                                             input.toFloatOrNull()?.let { px ->
-                                                if (screenW > 0) {
-                                                    regionLeft = String.format(java.util.Locale.US, "%.4f", (px / screenW).coerceIn(0f, 1f))
+                                                if (baseW > 0) {
+                                                    regionLeft = String.format(java.util.Locale.US, "%.4f", (px / baseW).coerceIn(0f, 1f))
+                                                    hasCustomRegion = true
                                                 }
                                             }
                                         },
@@ -920,8 +1132,9 @@ fun ActionEditScreen(
                                         onValueChange = { input ->
                                             pxTopText = input
                                             input.toFloatOrNull()?.let { px ->
-                                                if (screenH > 0) {
-                                                    regionTop = String.format(java.util.Locale.US, "%.4f", (px / screenH).coerceIn(0f, 1f))
+                                                if (baseH > 0) {
+                                                    regionTop = String.format(java.util.Locale.US, "%.4f", (px / baseH).coerceIn(0f, 1f))
+                                                    hasCustomRegion = true
                                                 }
                                             }
                                         },
@@ -937,8 +1150,9 @@ fun ActionEditScreen(
                                         onValueChange = { input ->
                                             pxRightText = input
                                             input.toFloatOrNull()?.let { px ->
-                                                if (screenW > 0) {
-                                                    regionRight = String.format(java.util.Locale.US, "%.4f", (px / screenW).coerceIn(0f, 1f))
+                                                if (baseW > 0) {
+                                                    regionRight = String.format(java.util.Locale.US, "%.4f", (px / baseW).coerceIn(0f, 1f))
+                                                    hasCustomRegion = true
                                                 }
                                             }
                                         },
@@ -952,8 +1166,9 @@ fun ActionEditScreen(
                                         onValueChange = { input ->
                                             pxBottomText = input
                                             input.toFloatOrNull()?.let { px ->
-                                                if (screenH > 0) {
-                                                    regionBottom = String.format(java.util.Locale.US, "%.4f", (px / screenH).coerceIn(0f, 1f))
+                                                if (baseH > 0) {
+                                                    regionBottom = String.format(java.util.Locale.US, "%.4f", (px / baseH).coerceIn(0f, 1f))
+                                                    hasCustomRegion = true
                                                 }
                                             }
                                         },

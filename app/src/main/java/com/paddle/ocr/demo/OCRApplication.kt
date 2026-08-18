@@ -55,6 +55,7 @@ class OCRApplication : Application() {
         super.onCreate()
         instance = this
         com.paddle.ocr.demo.plugin.PluginStatusManager.init(this)
+        com.paddle.ocr.demo.plugin.PluginKeepAliveService.start(this)
         loadModels()
     }
 

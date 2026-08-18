@@ -18,7 +18,7 @@
     <string name="section_image_path">图片文件路径</string>
     <string name="label_image_path">文件绝对路径或 Uri</string>
     <string name="placeholder_image_path">/sdcard/Pictures/xxx.jpg 或 %img_path</string>
-    <string name="supporting_image_path">支持 Tasker/MacroDroid 变量 (如 %photo_path 或 [lv=img])</string>
+    <string name="supporting_image_path">支持 Tasker/MacroDroid 变量 (如 %photo_path 或 [lv=img])。通过浏览选图未授予所有文件权限时，可能显示为系统授权格式 (如 content://...)</string>
     <string name="btn_browse_files">浏览选取本地图片文件 (文件管理器)</string>
     <string name="section_target_text">目标匹配文本 (可选)</string>
     <string name="label_target_text">目标文本 / 关键字</string>
@@ -36,10 +36,14 @@
     <string name="switch_restrict_region">启用识别区域限制</string>
     <string name="desc_restrict_region">仅识别屏幕指定框选区域，大幅降低耗时并防止误触</string>
     <string name="region_draw">屏幕画框选区</string>
+    <string name="region_draw_current_img">在当前图片上框选</string>
+    <string name="region_draw_new_screen">重新截屏画框</string>
+    <string name="region_not_configured">尚未设定局部选区，点击下方按钮开始框选</string>
+    <string name="region_full_image_fmt">全图尺寸: %1$d x %2$d 像素</string>
     <string name="region_draw_confirm">确定选区</string>
     <string name="region_draw_cancel">取消</string>
     <string name="region_pixel_range_fmt">选区像素: X (%1$d ~ %2$d), Y (%3$d ~ %4$d)</string>
-    <string name="region_pixel_size_fmt">尺寸: %1$d x %2$d 像素 (屏幕: %3$d x %4$d)</string>
+    <string name="region_pixel_size_fmt">选区尺寸: %1$d x %2$d 像素 (原图: %3$d x %4$d)</string>
     <string name="region_advanced_show_px">展开像素精确微调</string>
     <string name="region_advanced_hide_px">收起像素精确微调</string>
     <string name="region_left_px">左边界 (px)</string>
@@ -47,7 +51,7 @@
     <string name="region_right_px">右边界 (px)</string>
     <string name="region_bottom_px">下边界 (px)</string>
     <string name="floating_service_capture_btn">点击截屏选区</string>
-    <string name="floating_service_toast_hint">请先切换到目标界面，然后点击悬浮按钮截屏画框</string>
+    <string name="floating_service_toast_hint">可以切换到目标界面再截图</string>
     <string name="floating_service_notification_title">OCR 屏幕区域画框选区</string>
     <string name="floating_service_notification_desc">悬浮窗已开启，点击悬浮按钮即可截屏画框</string>
     <string name="section_output_variables">输出变量说明</string>
@@ -57,7 +61,24 @@
     <string name="var_desc_match_center_x">匹配文字中心点 X 轴坐标 (像素)</string>
     <string name="var_desc_match_center_y">匹配文字中心点 Y 轴坐标 (像素)</string>
     <string name="var_desc_errmsg">失败或异常时的具体错误描述</string>
+    <string name="btn_cancel">取消</string>
     <string name="btn_clear">清空</string>
+
+    <!-- Tasker Blurb & Variables -->
+    <string name="blurb_file_find_fmt">文件[%1$s] 查找: %2$s</string>
+    <string name="blurb_file_ocr_fmt">识别文件: %1$s</string>
+    <string name="blurb_screen_find_fmt">屏幕查找: %1$s</string>
+    <string name="blurb_screen_ocr">识别全屏文字</string>
+    <string name="blurb_a11y_find_fmt">无障碍查找: %1$s</string>
+    <string name="blurb_a11y_ocr">无障碍全屏识别</string>
+    <string name="blurb_region_suffix">(区域限制)</string>
+
+    <string name="var_label_full_text">全量文本</string>
+    <string name="var_label_json">JSON格式结果</string>
+    <string name="var_label_match_found">是否找到目标文本</string>
+    <string name="var_label_match_center_x">目标X坐标</string>
+    <string name="var_label_match_center_y">目标Y坐标</string>
+    <string name="var_label_errmsg">错误信息</string>
 
     <!-- Permission Check Cards -->
     <string name="perm_storage_title">建议授予所有文件访问权限</string>
