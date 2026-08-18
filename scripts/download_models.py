@@ -16,6 +16,21 @@ MODELS = {
     }
 }
 
+def download_url_with_retry(url, save_path, max_retries=3):
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    for attempt in range(1, max_retries + 1):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=60) as response, open(save_path, 'wb') as out_file:
+                shutil.copyfileobj(response, out_file)
+            return
+        except Exception as e:
+            print(f"[WARN] Download failed (attempt {attempt}/{max_retries}): {e}")
+            if attempt == max_retries:
+                raise
+            import time
+            time.sleep(3)
+
 def download_and_extract(model_type, target_dir, force=False):
     if model_type not in MODELS:
         print(f"Error: Unknown model type '{model_type}'. Choose from {list(MODELS.keys())}")
@@ -43,7 +58,7 @@ def download_and_extract(model_type, target_dir, force=False):
         # Download Det
         det_tar_path = os.path.join(temp_dir, "det.tar")
         print(f"[INFO] Downloading detection model ({model_type})...")
-        urllib.request.urlretrieve(urls["det"], det_tar_path)
+        download_url_with_retry(urls["det"], det_tar_path)
         with tarfile.open(det_tar_path) as tar:
             for member in tar.getmembers():
                 if member.name.endswith("inference.onnx"):
@@ -55,7 +70,7 @@ def download_and_extract(model_type, target_dir, force=False):
         # Download Rec
         rec_tar_path = os.path.join(temp_dir, "rec.tar")
         print(f"[INFO] Downloading recognition model ({model_type})...")
-        urllib.request.urlretrieve(urls["rec"], rec_tar_path)
+        download_url_with_retry(urls["rec"], rec_tar_path)
         with tarfile.open(rec_tar_path) as tar:
             for member in tar.getmembers():
                 if member.name.endswith("inference.onnx"):
