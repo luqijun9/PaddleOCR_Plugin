@@ -109,6 +109,8 @@
     <string name="perm_accessibility_title">Accessibility Service Not Enabled</string>
     <string name="perm_accessibility_desc">Silent screenshot requires enabling \"PP-OCR Accessibility Service\" in Accessibility Settings for popup-free capturing.</string>
     <string name="perm_accessibility_btn">Go to Accessibility Settings</string>
+    <string name="perm_appops_title">Bypass Screen Capture Confirmation (Optional)</string>
+    <string name="perm_appops_desc">With Shizuku / Root or ADB permissions, run this command to bypass the system screen capture prompt:</string>
 
     <!-- Notifications (PluginStatusManager) -->
     <string name="notif_channel_name">OCR Plugin Status</string>

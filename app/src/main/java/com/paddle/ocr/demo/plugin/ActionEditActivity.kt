@@ -828,9 +828,10 @@ fun ActionEditScreen(
                 StoragePermissionCheckCard(context)
             }
 
-            // 悬浮窗权限检测卡片 (仅截屏模式显示)
+            // 悬浮窗权限检测卡片与 AppOps 免确认建议 (仅截屏模式显示)
             if (imageSource == TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE) {
                 OverlayPermissionCheckCard(context)
+                AppOpsMediaProjectionBypassCard(context)
             }
 
             // 通知权限检测卡片
@@ -1807,6 +1808,115 @@ fun AccessibilityPermissionCheckCard(context: Context) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(stringResource(R.string.perm_accessibility_btn))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AppOpsMediaProjectionBypassCard(context: Context) {
+    var isDismissed by remember {
+        val prefs = context.getSharedPreferences("ocr_plugin_prefs", Context.MODE_PRIVATE)
+        mutableStateOf(prefs.getBoolean("appops_bypass_dismissed", false))
+    }
+
+    if (isDismissed) return
+
+    val command = "appops set com.paddle.ocr.demo PROJECT_MEDIA allow"
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.perm_appops_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        isDismissed = true
+                        val prefs = context.getSharedPreferences("ocr_plugin_prefs", Context.MODE_PRIVATE)
+                        prefs.edit().putBoolean("appops_bypass_dismissed", true).apply()
+                    },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.btn_dismiss),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.perm_appops_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        MaterialTheme.colorScheme.surface,
+                        RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = command,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                )
+
+                FilledTonalButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("AppOps Command", command)
+                        clipboard.setPrimaryClip(clip)
+                        android.widget.Toast.makeText(context, context.getString(R.string.toast_cmd_copied), android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(30.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.btn_copy_cmd),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
