@@ -84,7 +84,7 @@
     <string name="section_silent_wakeup">后台静默唤醒 / 进程防杀保活 (可选)</string>
     <string name="desc_silent_wakeup">若插件在后台被系统强行停止或冻结，可通过以下方式无感拉起，屏幕零弹窗：</string>
     <string name="wakeup_tier1_title">方式一：Tasker 原生免 Root 唤醒</string>
-    <string name="wakeup_tier1_desc">在 Tasker 中添加动作：【应用 -> 启动应用 -> 长按选择 OCR 插件 -> 选择 WakeUpActivity】，或者直接发送打开组件 Intent。</string>
+    <string name="wakeup_tier1_desc">在 Tasker 中添加【发送 Intent】动作：\n• 包名 (Package): com.paddle.ocr.demo\n• 类名 (Class): com.paddle.ocr.demo.plugin.WakeUpActivity\n• 目标 (Target): Activity\n• 操作 (Action): 留空即可\n（也可通过【启动应用 -> 长按选择 OCR 插件 -> 选择 WakeUpActivity】）</string>
     <string name="wakeup_tier1_code">com.paddle.ocr.demo/.plugin.WakeUpActivity</string>
     <string name="wakeup_tier2_title">方式二：Shell / Shizuku 命令行唤醒</string>
     <string name="wakeup_tier2_desc">在宏脚本中添加“运行 Shell”动作（勾选使用 Root 或 Shizuku），执行以下命令：</string>

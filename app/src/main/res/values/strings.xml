@@ -84,7 +84,7 @@
     <string name="section_silent_wakeup">Silent Background Wakeup / Keep-Alive (Optional)</string>
     <string name="desc_silent_wakeup">If the plugin was force-stopped or frozen by OS, use either method below for 100% silent zero-UI resurrection:</string>
     <string name="wakeup_tier1_title">Method 1: Tasker Native Launch (No Root / No Shizuku)</string>
-    <string name="wakeup_tier1_desc">In Tasker, add action: [App -> Launch App -> Long press OCR Plugin -> Select WakeUpActivity], or send an Open Component Intent.</string>
+    <string name="wakeup_tier1_desc">In Tasker, add [Send Intent] action:\n• Package: com.paddle.ocr.demo\n• Class: com.paddle.ocr.demo.plugin.WakeUpActivity\n• Target: Activity\n• Action: Leave empty\n(Or via [Launch App -> Long press OCR Plugin -> Select WakeUpActivity])</string>
     <string name="wakeup_tier1_code">com.paddle.ocr.demo/.plugin.WakeUpActivity</string>
     <string name="wakeup_tier2_title">Method 2: Shell / Shizuku Command Line</string>
     <string name="wakeup_tier2_desc">In your macro, add a \"Run Shell\" action (with Root or Shizuku enabled) to execute:</string>
