@@ -105,11 +105,25 @@ jobs:
       - name: Display downloaded APKs
         run: ls -la all-apks/
 
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Tag Message
+        id: tag_msg
+        run: |
+          TAG_NOTES=$(git tag -l --format='%(contents)' ${{ github.ref_name }})
+          echo "tag_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAG_NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: all-apks/*.apk
+          body: ${{ steps.tag_msg.outputs.tag_notes }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
