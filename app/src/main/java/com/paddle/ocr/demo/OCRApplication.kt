@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import android.graphics.Bitmap
 import com.paddle.ocr.model.OCRRunResult
@@ -50,6 +52,18 @@ class OCRApplication : Application() {
 
     val isModelLoaded: Boolean
         get() = _modelState.value is ModelState.Ready
+
+    suspend fun awaitModelReady(timeoutMs: Long = 10000): PaddleOCR? {
+        val current = ocr
+        if (current != null) return current
+        if (_modelState.value is ModelState.Error) {
+            retryLoadModels()
+        }
+        return withTimeoutOrNull(timeoutMs) {
+            modelState.first { it is ModelState.Ready || it is ModelState.Error }
+            ocr
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()

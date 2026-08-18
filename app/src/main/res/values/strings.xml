@@ -80,6 +80,18 @@
     <string name="var_label_match_center_y">Target Center Y</string>
     <string name="var_label_errmsg">Error Message</string>
 
+    <!-- Silent Wakeup Section -->
+    <string name="section_silent_wakeup">Silent Background Wakeup / Keep-Alive (Optional)</string>
+    <string name="desc_silent_wakeup">If the plugin was force-stopped or frozen by OS, execute any of the following commands in your Tasker / MacroDroid script for 100% silent zero-UI resurrection:</string>
+    <string name="wakeup_cmd_shell_title">Shell / Shizuku Broadcast Wakeup (Recommended)</string>
+    <string name="wakeup_cmd_shell_code">am broadcast -a com.paddle.ocr.demo.WAKEUP -n com.paddle.ocr.demo/.plugin.OcrActionReceiver -f 0x01000020</string>
+    <string name="wakeup_cmd_service_title">Shell Start Foreground Service</string>
+    <string name="wakeup_cmd_service_code">am start-foreground-service -n com.paddle.ocr.demo/.plugin.PluginKeepAliveService</string>
+    <string name="wakeup_cmd_activity_title">Tasker Open Component Intent (Invisible Activity)</string>
+    <string name="wakeup_cmd_activity_code">com.paddle.ocr.demo/.plugin.WakeUpActivity</string>
+    <string name="btn_copy_cmd">Copy</string>
+    <string name="toast_cmd_copied">Wakeup command copied to clipboard</string>
+
     <!-- Permission Check Cards -->
     <string name="perm_storage_title">All Files Access Recommended</string>
     <string name="perm_storage_desc">Granting \"All files access\" allows the plugin to directly read images from any directory (DCIM, Downloads, etc.) without sandbox restrictions.</string>

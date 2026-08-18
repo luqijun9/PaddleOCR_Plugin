@@ -80,6 +80,18 @@
     <string name="var_label_match_center_y">目标Y坐标</string>
     <string name="var_label_errmsg">错误信息</string>
 
+    <!-- Silent Wakeup Section -->
+    <string name="section_silent_wakeup">后台静默唤醒 / 防杀保活 (可选)</string>
+    <string name="desc_silent_wakeup">若插件在后台被系统强行停止或冻结，可在自动化宏/任务脚本开头执行以下任意指令，实现 100% 纯后台静默唤醒（屏幕零弹窗）：</string>
+    <string name="wakeup_cmd_shell_title">Shell / Shizuku 广播唤醒 (推荐)</string>
+    <string name="wakeup_cmd_shell_code">am broadcast -a com.paddle.ocr.demo.WAKEUP -n com.paddle.ocr.demo/.plugin.OcrActionReceiver -f 0x01000020</string>
+    <string name="wakeup_cmd_service_title">Shell 启动前台保活服务</string>
+    <string name="wakeup_cmd_service_code">am start-foreground-service -n com.paddle.ocr.demo/.plugin.PluginKeepAliveService</string>
+    <string name="wakeup_cmd_activity_title">Tasker 打开组件 Intent (无感透明 Activity)</string>
+    <string name="wakeup_cmd_activity_code">com.paddle.ocr.demo/.plugin.WakeUpActivity</string>
+    <string name="btn_copy_cmd">复制</string>
+    <string name="toast_cmd_copied">已复制唤醒指令</string>
+
     <!-- Permission Check Cards -->
     <string name="perm_storage_title">建议授予所有文件访问权限</string>
     <string name="perm_storage_desc">开启“所有文件访问权限”后，插件可直接读取相册、下载等任意路径的图片，避免跨目录访问受限。</string>

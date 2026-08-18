@@ -22,6 +22,12 @@ class OcrActionReceiver : BroadcastReceiver() {
         log("isOrderedBroadcast=$isOrderedBroadcast")
         log("goAsync=$isOrderedBroadcast") // goAsync available
 
+        if (intent.action == "com.paddle.ocr.demo.WAKEUP") {
+            log("Received WAKEUP broadcast - starting KeepAliveService and warming up")
+            PluginKeepAliveService.start(context)
+            return
+        }
+
         if (intent.action != TaskerPluginConstants.ACTION_FIRE_SETTING) {
             log("WRONG action, returning")
             return

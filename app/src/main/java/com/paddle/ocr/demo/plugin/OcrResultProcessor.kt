@@ -139,12 +139,12 @@ object OcrResultProcessor {
         regionRight: String = "1.0",
         regionBottom: String = "1.0"
     ): OcrProcessResult {
-        val ocrEngine = OCRApplication.instance.ocr
+        val ocrEngine = OCRApplication.instance.awaitModelReady(timeoutMs = 10000)
         if (ocrEngine == null) {
-            Log.e(TAG, "[$SUB_TAG] OCR Engine is NULL - not initialized!")
+            Log.e(TAG, "[$SUB_TAG] OCR Engine is NULL - initialization timed out or failed!")
             return OcrProcessResult(
                 success = false,
-                errorMessage = "OCR引擎未初始化"
+                errorMessage = "OCR引擎初始化超时或失败"
             )
         }
 

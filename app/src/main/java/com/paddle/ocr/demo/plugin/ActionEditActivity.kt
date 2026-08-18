@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -1184,6 +1185,9 @@ fun ActionEditScreen(
                 }
             }
 
+            // 后台静默唤醒 / 进程防杀保活卡片
+            SilentWakeupCard()
+
             // 返回变量说明卡片
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -1220,6 +1224,116 @@ fun ActionEditScreen(
                     VariableRow(name = "%match_center_y", desc = stringResource(R.string.var_desc_match_center_y))
                     VariableRow(name = "%errmsg", desc = stringResource(R.string.var_desc_errmsg))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SilentWakeupCard() {
+    val context = LocalContext.current
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = stringResource(R.string.section_silent_wakeup),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.desc_silent_wakeup),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            WakeupCommandItem(
+                title = stringResource(R.string.wakeup_cmd_shell_title),
+                command = stringResource(R.string.wakeup_cmd_shell_code)
+            )
+
+            WakeupCommandItem(
+                title = stringResource(R.string.wakeup_cmd_service_title),
+                command = stringResource(R.string.wakeup_cmd_service_code)
+            )
+
+            WakeupCommandItem(
+                title = stringResource(R.string.wakeup_cmd_activity_title),
+                command = stringResource(R.string.wakeup_cmd_activity_code)
+            )
+        }
+    }
+}
+
+@Composable
+fun WakeupCommandItem(title: String, command: String) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                RoundedCornerShape(10.dp)
+            )
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = command,
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp)
+            )
+
+            FilledTonalButton(
+                onClick = {
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("Wakeup Command", command)
+                    clipboard.setPrimaryClip(clip)
+                    android.widget.Toast.makeText(context, context.getString(R.string.toast_cmd_copied), android.widget.Toast.LENGTH_SHORT).show()
+                },
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.btn_copy_cmd),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

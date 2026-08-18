@@ -47,8 +47,16 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.twofortyfouram.locale.intent.action.FIRE_SETTING" />
+                <action android:name="com.paddle.ocr.demo.WAKEUP" />
             </intent-filter>
         </receiver>
+
+        <activity
+            android:name=".plugin.WakeUpActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:exported="true" />
 
         <activity
             android:name=".plugin.ScreenCaptureActivity"
