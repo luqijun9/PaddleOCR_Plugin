@@ -1267,25 +1267,22 @@ fun SilentWakeupCard() {
             )
 
             WakeupCommandItem(
-                title = stringResource(R.string.wakeup_cmd_shell_title),
-                command = stringResource(R.string.wakeup_cmd_shell_code)
+                title = stringResource(R.string.wakeup_tier1_title),
+                desc = stringResource(R.string.wakeup_tier1_desc),
+                code = stringResource(R.string.wakeup_tier1_code)
             )
 
             WakeupCommandItem(
-                title = stringResource(R.string.wakeup_cmd_service_title),
-                command = stringResource(R.string.wakeup_cmd_service_code)
-            )
-
-            WakeupCommandItem(
-                title = stringResource(R.string.wakeup_cmd_activity_title),
-                command = stringResource(R.string.wakeup_cmd_activity_code)
+                title = stringResource(R.string.wakeup_tier2_title),
+                desc = stringResource(R.string.wakeup_tier2_desc),
+                code = stringResource(R.string.wakeup_tier2_code)
             )
         }
     }
 }
 
 @Composable
-fun WakeupCommandItem(title: String, command: String) {
+fun WakeupCommandItem(title: String, desc: String, code: String) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -1294,23 +1291,35 @@ fun WakeupCommandItem(title: String, command: String) {
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 RoundedCornerShape(10.dp)
             )
-            .padding(10.dp),
+            .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
 
+        Text(
+            text = desc,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    RoundedCornerShape(8.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = command,
+                text = code,
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
@@ -1321,13 +1330,13 @@ fun WakeupCommandItem(title: String, command: String) {
             FilledTonalButton(
                 onClick = {
                     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    val clip = android.content.ClipData.newPlainText("Wakeup Command", command)
+                    val clip = android.content.ClipData.newPlainText("Wakeup Command", code)
                     clipboard.setPrimaryClip(clip)
                     android.widget.Toast.makeText(context, context.getString(R.string.toast_cmd_copied), android.widget.Toast.LENGTH_SHORT).show()
                 },
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                 shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.height(32.dp)
+                modifier = Modifier.height(30.dp)
             ) {
                 Text(
                     text = stringResource(R.string.btn_copy_cmd),
