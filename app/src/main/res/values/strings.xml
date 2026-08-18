@@ -20,9 +20,11 @@
     <string name="placeholder_image_path">/sdcard/Pictures/xxx.jpg or %img_path</string>
     <string name="supporting_image_path">Supports Tasker/MacroDroid variables (e.g. %photo_path or [lv=img]). When selecting via Browse without all-files permission, it may appear as system URI format (e.g. content://...)</string>
     <string name="btn_browse_files">Browse Files (File Manager)</string>
-    <string name="section_target_text">Target Match Text (Optional)</string>
-    <string name="label_target_text">Target Text / Keyword</string>
-    <string name="placeholder_target_text">Leave empty for full screen text recognition</string>
+    <!-- Target Text Configuration -->
+    <string name="section_target_text">Target Text Matching (Optional)</string>
+    <string name="desc_target_text">Find specific keywords and calculate center coordinates</string>
+    <string name="label_target_text">Target Match Text</string>
+    <string name="placeholder_target_text">Enter keywords or regular expressions</string>
     <string name="match_scope">Match Scope</string>
     <string name="contains_match">Contains</string>
     <string name="exact_match">Exact Match</string>
@@ -36,7 +38,7 @@
     <string name="switch_restrict_region">Enable Region Restriction</string>
     <string name="desc_restrict_region">Only recognize within specified screen region, speeding up OCR and avoiding misclicks</string>
     <string name="region_draw">Draw Region on Screen</string>
-    <string name="region_draw_current_img">Draw Region on Current Image</string>
+    <string name="region_draw_current_img">Redraw Region on Current Image</string>
     <string name="region_draw_new_screen">New Screen Capture &amp; Draw</string>
     <string name="region_not_configured">No custom region configured. Tap below to draw.</string>
     <string name="region_full_image_fmt">Full Image Size: %1$d x %2$d px</string>
@@ -81,7 +83,7 @@
     <string name="var_label_errmsg">Error Message</string>
 
     <!-- Silent Wakeup Section -->
-    <string name="section_silent_wakeup">Silent Background Wakeup (Optional)</string>
+    <string name="section_silent_wakeup">Silent Background Wakeup</string>
     <string name="desc_silent_wakeup">If the plugin is not running, wake it up silently before executing tasks with zero screen pop-ups:</string>
     <string name="wakeup_tier1_title">Method 1: Tasker Native Launch (No Root / No Shizuku)</string>
     <string name="wakeup_tier1_desc">In Tasker, add [Send Intent] action:\n• Target: Activity\n• Action: Leave empty\n• Package: com.paddle.ocr.demo\n• Class: com.paddle.ocr.demo.plugin.WakeUpActivity\n(Or launch app activity and select WakeUpActivity)</string>

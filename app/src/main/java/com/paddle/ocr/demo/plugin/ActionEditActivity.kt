@@ -20,6 +20,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -376,6 +377,7 @@ fun ActionEditScreen(
     var imageSource by remember { mutableStateOf(initialImageSource) }
     var imagePath by remember { mutableStateOf(initialImagePath) }
     var targetText by remember { mutableStateOf(initialTargetText) }
+    var enableTargetMatch by remember { mutableStateOf(initialTargetText.isNotEmpty()) }
     var isRegex by remember { mutableStateOf(initialIsRegex) }
     var isExactMatch by remember { mutableStateOf(initialIsExactMatch) }
     var isIgnoreCase by remember { mutableStateOf(initialIsIgnoreCase) }
@@ -556,7 +558,7 @@ fun ActionEditScreen(
                             onSave(
                                 imageSource,
                                 imagePath,
-                                targetText,
+                                if (enableTargetMatch) targetText else "",
                                 isRegex,
                                 isExactMatch,
                                 isIgnoreCase,
@@ -755,119 +757,149 @@ fun ActionEditScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { enableTargetMatch = !enableTargetMatch },
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.section_target_text),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.section_target_text),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = stringResource(R.string.desc_target_text),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = enableTargetMatch,
+                            onCheckedChange = { enableTargetMatch = it }
                         )
                     }
 
-                    OutlinedTextField(
-                        value = targetText,
-                        onValueChange = { targetText = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.label_target_text)) },
-                        placeholder = { Text(stringResource(R.string.placeholder_target_text)) },
-                        trailingIcon = {
-                            if (targetText.isNotEmpty()) {
-                                IconButton(onClick = { targetText = "" }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = stringResource(R.string.btn_clear)
+                    AnimatedVisibility(visible = enableTargetMatch) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            OutlinedTextField(
+                                value = targetText,
+                                onValueChange = { targetText = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text(stringResource(R.string.label_target_text)) },
+                                placeholder = { Text(stringResource(R.string.placeholder_target_text)) },
+                                trailingIcon = {
+                                    if (targetText.isNotEmpty()) {
+                                        IconButton(onClick = { targetText = "" }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Clear,
+                                                contentDescription = stringResource(R.string.btn_clear)
+                                            )
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            // 匹配范围 (包含 / 完全匹配)
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = stringResource(R.string.match_scope),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                val scopeOptions = listOf(
+                                    stringResource(R.string.contains_match),
+                                    stringResource(R.string.exact_match)
+                                )
+                                val selectedScopeIndex = if (isExactMatch) 1 else 0
+                                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                                    scopeOptions.forEachIndexed { index, label ->
+                                        SegmentedButton(
+                                            selected = selectedScopeIndex == index,
+                                            onClick = { isExactMatch = (index == 1) },
+                                            shape = SegmentedButtonDefaults.itemShape(index = index, count = scopeOptions.size)
+                                        ) {
+                                            Text(label)
+                                        }
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            // 选项 1: 正则表达式
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { isRegex = !isRegex },
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.switch_use_regex),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.desc_use_regex),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                                Switch(
+                                    checked = isRegex,
+                                    onCheckedChange = { isRegex = it }
+                                )
                             }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    // 匹配范围 (包含 / 完全匹配)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = stringResource(R.string.match_scope),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        val scopeOptions = listOf(
-                            stringResource(R.string.contains_match),
-                            stringResource(R.string.exact_match)
-                        )
-                        val selectedScopeIndex = if (isExactMatch) 1 else 0
-                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            scopeOptions.forEachIndexed { index, label ->
-                                SegmentedButton(
-                                    selected = selectedScopeIndex == index,
-                                    onClick = { isExactMatch = (index == 1) },
-                                    shape = SegmentedButtonDefaults.itemShape(index = index, count = scopeOptions.size)
-                                ) {
-                                    Text(label)
+                            // 选项 2: 忽略大小写
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { isIgnoreCase = !isIgnoreCase },
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.switch_ignore_case),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.desc_ignore_case),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
+                                Switch(
+                                    checked = isIgnoreCase,
+                                    onCheckedChange = { isIgnoreCase = it }
+                                )
                             }
                         }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                    // 选项 1: 正则表达式
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.switch_use_regex),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = stringResource(R.string.desc_use_regex),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = isRegex,
-                            onCheckedChange = { isRegex = it }
-                        )
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                    // 选项 2: 忽略大小写
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.switch_ignore_case),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = stringResource(R.string.desc_ignore_case),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = isIgnoreCase,
-                            onCheckedChange = { isIgnoreCase = it }
-                        )
                     }
                 }
             }
@@ -885,7 +917,9 @@ fun ActionEditScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { restrictRegion = !restrictRegion },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
