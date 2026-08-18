@@ -93,6 +93,8 @@
     <string name="wakeup_tier2_code">am start -n com.paddle.ocr.demo/.plugin.WakeUpActivity</string>
     <string name="btn_copy_cmd">复制</string>
     <string name="toast_cmd_copied">已复制到剪贴板</string>
+    <string name="btn_ignore_battery_optimizations">允许后台运行</string>
+    <string name="btn_dismiss">关闭</string>
 
     <!-- Permission Check Cards -->
     <string name="perm_storage_title">建议授予所有文件访问权限</string>

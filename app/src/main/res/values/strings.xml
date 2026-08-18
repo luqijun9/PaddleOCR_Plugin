@@ -93,6 +93,8 @@
     <string name="wakeup_tier2_code">am start -n com.paddle.ocr.demo/.plugin.WakeUpActivity</string>
     <string name="btn_copy_cmd">Copy</string>
     <string name="toast_cmd_copied">Copied to clipboard</string>
+    <string name="btn_ignore_battery_optimizations">Allow Background</string>
+    <string name="btn_dismiss">Dismiss</string>
 
     <!-- Permission Check Cards -->
     <string name="perm_storage_title">All Files Access Recommended</string>

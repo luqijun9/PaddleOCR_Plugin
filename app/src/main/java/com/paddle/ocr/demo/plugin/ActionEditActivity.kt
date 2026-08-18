@@ -416,6 +416,29 @@ fun ActionEditScreen(
 
     var localImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isIgnoringBattery by remember {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        mutableStateOf(pm?.isIgnoringBatteryOptimizations(context.packageName) ?: true)
+    }
+    var isBatteryDismissed by remember {
+        val prefs = context.getSharedPreferences("ocr_plugin_prefs", Context.MODE_PRIVATE)
+        mutableStateOf(prefs.getBoolean("battery_opt_dismissed", false))
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+                isIgnoringBattery = pm?.isIgnoringBatteryOptimizations(context.packageName) ?: true
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(imageSource, imagePath, restrictRegion) {
         if (restrictRegion && imageSource == TaskerPluginConstants.IMAGE_SOURCE_FILE_PATH && imagePath.isNotBlank()) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -607,11 +630,78 @@ fun ActionEditScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.section_image_source),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.section_image_source),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        if (!isIgnoringBattery && !isBatteryDismissed) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clickable {
+                                            try {
+                                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                                    data = Uri.parse("package:${context.packageName}")
+                                                }
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                try {
+                                                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                                    context.startActivity(intent)
+                                                } catch (e2: Exception) {
+                                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                        data = Uri.parse("package:${context.packageName}")
+                                                    }
+                                                    context.startActivity(intent)
+                                                }
+                                            }
+                                        }
+                                        .padding(start = 8.dp, end = 2.dp, top = 2.dp, bottom = 2.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.btn_ignore_battery_optimizations),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            isBatteryDismissed = true
+                                            val prefs = context.getSharedPreferences("ocr_plugin_prefs", Context.MODE_PRIVATE)
+                                            prefs.edit().putBoolean("battery_opt_dismissed", true).apply()
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.btn_dismiss),
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     SingleChoiceSegmentedButtonRow(
                         modifier = Modifier.fillMaxWidth()
