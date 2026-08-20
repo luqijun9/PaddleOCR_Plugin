@@ -1,5 +1,5 @@
 Global:
-  model_name: PP-OCRv6_small_det
+  model_name: PP-OCRv6_tiny_det
 Hpi:
   backend_configs:
     paddle_infer:
@@ -20,7 +20,7 @@ Hpi:
     tensorrt:
       dynamic_shapes: *id001
 PostProcess:
-  box_thresh: 0.45
+  box_thresh: 0.4
   max_candidates: 3000
   name: DBPostProcess
   thresh: 0.2

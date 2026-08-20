@@ -42,10 +42,11 @@ def download_and_extract(model_type, target_dir, force=False):
     os.makedirs(rec_dir, exist_ok=True)
 
     det_onnx = os.path.join(det_dir, "inference.onnx")
+    det_yml = os.path.join(det_dir, "inference.yml")
     rec_onnx = os.path.join(rec_dir, "inference.onnx")
     rec_yml = os.path.join(rec_dir, "inference.yml")
 
-    if not force and os.path.exists(det_onnx) and os.path.exists(rec_onnx) and os.path.exists(rec_yml):
+    if not force and os.path.exists(det_onnx) and os.path.exists(det_yml) and os.path.exists(rec_onnx) and os.path.exists(rec_yml):
         print(f"[OK] Models already present in '{target_dir}'. Skipping download (use --force to overwrite).")
         return
 
@@ -66,6 +67,11 @@ def download_and_extract(model_type, target_dir, force=False):
                     with open(det_onnx, "wb") as out:
                         shutil.copyfileobj(f, out)
                     print(f"  -> Extracted {det_onnx}")
+                elif member.name.endswith("inference.yml"):
+                    f = tar.extractfile(member)
+                    with open(det_yml, "wb") as out:
+                        shutil.copyfileobj(f, out)
+                    print(f"  -> Extracted {det_yml}")
 
         # Download Rec
         rec_tar_path = os.path.join(temp_dir, "rec.tar")
