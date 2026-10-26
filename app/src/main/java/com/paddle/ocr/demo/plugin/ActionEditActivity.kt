@@ -77,6 +77,12 @@ class ActionEditActivity : ComponentActivity() {
     private var initialRegionRight: String = "1.0"
     private var initialRegionBottom: String = "1.0"
     private var initialRegionSpec: String = ""
+    private var initialRegionMode: String = TaskerPluginConstants.REGION_MODE_SINGLE
+    private var initialRegionUsePercent: Boolean = false
+    private var initialRegionVarLeft: String = ""
+    private var initialRegionVarTop: String = ""
+    private var initialRegionVarRight: String = ""
+    private var initialRegionVarBottom: String = ""
     private var initialRegionPreviewFile: String = ""
     private var instanceId: String = ""
 
@@ -202,6 +208,12 @@ class ActionEditActivity : ComponentActivity() {
                 initialRegionRight = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, "1.0")
                 initialRegionBottom = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, "1.0")
                 initialRegionSpec = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_SPEC, "")
+                initialRegionMode = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_MODE, TaskerPluginConstants.REGION_MODE_SINGLE)
+                initialRegionUsePercent = bundle.getBoolean(TaskerPluginConstants.BUNDLE_KEY_REGION_USE_PERCENT, false)
+                initialRegionVarLeft = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_LEFT, "")
+                initialRegionVarTop = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_TOP, "")
+                initialRegionVarRight = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_RIGHT, "")
+                initialRegionVarBottom = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_BOTTOM, "")
                 initialRegionPreviewFile = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_PREVIEW_FILE, "")
                 instanceId = bundle.getString("plugin_instance_id") ?: UUID.randomUUID().toString()
             }
@@ -225,6 +237,12 @@ class ActionEditActivity : ComponentActivity() {
                     initialRegionRight = initialRegionRight,
                     initialRegionBottom = initialRegionBottom,
                     initialRegionSpec = initialRegionSpec,
+                    initialRegionMode = initialRegionMode,
+                    initialRegionUsePercent = initialRegionUsePercent,
+                    initialRegionVarLeft = initialRegionVarLeft,
+                    initialRegionVarTop = initialRegionVarTop,
+                    initialRegionVarRight = initialRegionVarRight,
+                    initialRegionVarBottom = initialRegionVarBottom,
                     initialRegionPreviewFile = initialRegionPreviewFile,
                     regionResultFlow = regionResultFlow,
                     regionPreviewFlow = regionPreviewFlow,
@@ -234,7 +252,7 @@ class ActionEditActivity : ComponentActivity() {
                     onLaunchInPlaceRegionDraw = { bitmap, restrict, left, top, right, bottom ->
                         requestInPlaceRegionDraw(bitmap, restrict, left, top, right, bottom)
                     },
-                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom, regionSpec, regionPreviewFile ->
+                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom, regionSpec, regionMode, regionUsePercent, regionVarLeft, regionVarTop, regionVarRight, regionVarBottom, regionPreviewFile ->
                         saveAndFinish(
                             imageSource,
                             imagePath,
@@ -248,6 +266,12 @@ class ActionEditActivity : ComponentActivity() {
                             regionRight,
                             regionBottom,
                             regionSpec,
+                            regionMode,
+                            regionUsePercent,
+                            regionVarLeft,
+                            regionVarTop,
+                            regionVarRight,
+                            regionVarBottom,
                             regionPreviewFile
                         )
                     },
@@ -272,6 +296,12 @@ class ActionEditActivity : ComponentActivity() {
         regionRight: String,
         regionBottom: String,
         regionSpec: String,
+        regionMode: String,
+        regionUsePercent: Boolean,
+        regionVarLeft: String,
+        regionVarTop: String,
+        regionVarRight: String,
+        regionVarBottom: String,
         regionPreviewFile: String
     ) {
         val resultIntent = Intent()
@@ -288,6 +318,12 @@ class ActionEditActivity : ComponentActivity() {
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, regionRight)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, regionBottom)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_SPEC, regionSpec)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_MODE, regionMode)
+            putBoolean(TaskerPluginConstants.BUNDLE_KEY_REGION_USE_PERCENT, regionUsePercent)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_LEFT, regionVarLeft)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_TOP, regionVarTop)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_RIGHT, regionVarRight)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_BOTTOM, regionVarBottom)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_PREVIEW_FILE, regionPreviewFile)
             putString("plugin_instance_id", instanceId)
         }
@@ -347,7 +383,11 @@ class ActionEditActivity : ComponentActivity() {
                     TaskerPluginConstants.BUNDLE_KEY_REGION_TOP,
                     TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT,
                     TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM,
-                    TaskerPluginConstants.BUNDLE_KEY_REGION_SPEC
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_SPEC,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_LEFT,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_TOP,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_RIGHT,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_BOTTOM
                 )
             )
         }
@@ -375,12 +415,18 @@ fun ActionEditScreen(
     initialRegionRight: String,
     initialRegionBottom: String,
     initialRegionSpec: String,
+    initialRegionMode: String,
+    initialRegionUsePercent: Boolean,
+    initialRegionVarLeft: String,
+    initialRegionVarTop: String,
+    initialRegionVarRight: String,
+    initialRegionVarBottom: String,
     initialRegionPreviewFile: String,
     regionResultFlow: StateFlow<FloatArray?>,
     regionPreviewFlow: StateFlow<String?>,
     onLaunchScreenCapture: (Boolean, String, String, String, String) -> Unit,
     onLaunchInPlaceRegionDraw: (Bitmap, Boolean, String, String, String, String) -> Unit,
-    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String, String, String) -> Unit,
+    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String, String, String, Boolean, String, String, String, String, String) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
@@ -397,6 +443,12 @@ fun ActionEditScreen(
     var regionRight by remember { mutableStateOf(initialRegionRight) }
     var regionBottom by remember { mutableStateOf(initialRegionBottom) }
     var regionSpec by remember { mutableStateOf(initialRegionSpec) }
+    var regionMode by remember { mutableStateOf(initialRegionMode) }
+    var regionUsePercent by remember { mutableStateOf(initialRegionUsePercent) }
+    var regionVarLeft by remember { mutableStateOf(initialRegionVarLeft) }
+    var regionVarTop by remember { mutableStateOf(initialRegionVarTop) }
+    var regionVarRight by remember { mutableStateOf(initialRegionVarRight) }
+    var regionVarBottom by remember { mutableStateOf(initialRegionVarBottom) }
     var regionPreviewFile by remember { mutableStateOf(initialRegionPreviewFile) }
 
     val initialHasCustomRegion = initialRestrictRegion &&
@@ -518,6 +570,12 @@ fun ActionEditScreen(
             regionRight,
             regionBottom,
             regionSpec,
+            regionMode,
+            regionUsePercent,
+            regionVarLeft,
+            regionVarTop,
+            regionVarRight,
+            regionVarBottom,
             regionPreviewFile
         )
     }
@@ -555,6 +613,12 @@ fun ActionEditScreen(
                             regionRight,
                             regionBottom,
                             regionSpec,
+                            regionMode,
+                            regionUsePercent,
+                            regionVarLeft,
+                            regionVarTop,
+                            regionVarRight,
+                            regionVarBottom,
                             regionPreviewFile
                         )
                     }) {
@@ -604,6 +668,12 @@ fun ActionEditScreen(
                                 regionRight,
                                 regionBottom,
                                 regionSpec,
+                                regionMode,
+                                regionUsePercent,
+                                regionVarLeft,
+                                regionVarTop,
+                                regionVarRight,
+                                regionVarBottom,
                                 regionPreviewFile
                             )
                         },
@@ -1073,26 +1143,131 @@ fun ActionEditScreen(
                     if (restrictRegion) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        OutlinedTextField(
-                            value = regionSpec,
-                            onValueChange = { regionSpec = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.label_region_spec)) },
-                            placeholder = { Text(stringResource(R.string.placeholder_region_spec)) },
-                            supportingText = { Text(stringResource(R.string.supporting_region_spec)) },
-                            trailingIcon = {
-                                if (regionSpec.isNotEmpty()) {
-                                    IconButton(onClick = { regionSpec = "" }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Clear,
-                                            contentDescription = stringResource(R.string.btn_clear)
-                                        )
-                                    }
+                        // 变量单位：默认实际像素，勾选后使用整数百分比
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { regionUsePercent = !regionUsePercent },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = regionUsePercent,
+                                onCheckedChange = { regionUsePercent = it }
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.region_use_percent),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = stringResource(R.string.desc_region_use_percent),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // 区域传入方式：合并传四个 / 分别传四个
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = stringResource(R.string.region_mode_title),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                                SegmentedButton(
+                                    selected = regionMode == TaskerPluginConstants.REGION_MODE_SINGLE,
+                                    onClick = { regionMode = TaskerPluginConstants.REGION_MODE_SINGLE },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                                ) {
+                                    Text(stringResource(R.string.region_mode_single))
                                 }
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                                SegmentedButton(
+                                    selected = regionMode == TaskerPluginConstants.REGION_MODE_SEPARATE,
+                                    onClick = { regionMode = TaskerPluginConstants.REGION_MODE_SEPARATE },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                                ) {
+                                    Text(stringResource(R.string.region_mode_separate))
+                                }
+                            }
+                        }
+
+                        if (regionMode == TaskerPluginConstants.REGION_MODE_SINGLE) {
+                            OutlinedTextField(
+                                value = regionSpec,
+                                onValueChange = { regionSpec = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = {
+                                    Text(stringResource(
+                                        if (regionUsePercent) R.string.label_region_spec_percent else R.string.label_region_spec_px
+                                    ))
+                                },
+                                placeholder = {
+                                    Text(stringResource(
+                                        if (regionUsePercent) R.string.placeholder_region_spec_percent else R.string.placeholder_region_spec_px
+                                    ))
+                                },
+                                supportingText = {
+                                    Text(stringResource(
+                                        if (regionUsePercent) R.string.supporting_region_spec_percent else R.string.supporting_region_spec_px
+                                    ))
+                                },
+                                trailingIcon = {
+                                    if (regionSpec.isNotEmpty()) {
+                                        IconButton(onClick = { regionSpec = "" }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Clear,
+                                                contentDescription = stringResource(R.string.btn_clear)
+                                            )
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    RegionVarField(
+                                        value = regionVarLeft,
+                                        onValueChange = { regionVarLeft = it },
+                                        label = stringResource(R.string.label_region_var_left),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    RegionVarField(
+                                        value = regionVarTop,
+                                        onValueChange = { regionVarTop = it },
+                                        label = stringResource(R.string.label_region_var_top),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    RegionVarField(
+                                        value = regionVarRight,
+                                        onValueChange = { regionVarRight = it },
+                                        label = stringResource(R.string.label_region_var_right),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    RegionVarField(
+                                        value = regionVarBottom,
+                                        onValueChange = { regionVarBottom = it },
+                                        label = stringResource(R.string.label_region_var_bottom),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(
+                                        if (regionUsePercent) R.string.supporting_region_var_percent else R.string.supporting_region_var_px
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
 
                         val dm = context.resources.displayMetrics
                         val screenW = dm.widthPixels
@@ -1274,6 +1449,20 @@ fun ActionEditScreen(
                         var pxRightText by remember(regionRight, baseW) { mutableStateOf(rightPx.toString()) }
                         var pxBottomText by remember(regionBottom, baseH) { mutableStateOf(bottomPx.toString()) }
 
+                        val hasRegionVariables = if (regionMode == TaskerPluginConstants.REGION_MODE_SEPARATE) {
+                            listOf(regionVarLeft, regionVarTop, regionVarRight, regionVarBottom).any { it.isNotBlank() }
+                        } else {
+                            regionSpec.isNotBlank()
+                        }
+                        if (hasRegionVariables) {
+                            Text(
+                                text = stringResource(R.string.region_var_override_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
                         TextButton(
                             onClick = { showAdvancedInput = !showAdvancedInput },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -1399,6 +1588,23 @@ fun ActionEditScreen(
             }
         }
     }
+}
+
+@Composable
+private fun RegionVarField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text(label) },
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp)
+    )
 }
 
 @Composable

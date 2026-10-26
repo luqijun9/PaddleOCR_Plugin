@@ -52,9 +52,24 @@
     <string name="region_top_px">Top (px)</string>
     <string name="region_right_px">Right (px)</string>
     <string name="region_bottom_px">Bottom (px)</string>
-    <string name="label_region_spec">Region Variable / Percent (Optional)</string>
-    <string name="placeholder_region_spec">%ocr_region or {v=ocr_region}, e.g. 0,25,100,75</string>
-    <string name="supporting_region_spec">Enter left,top,right,bottom (0-1 decimals or 0-100 percent). Tasker / MacroDroid variables are supported, e.g. %ocr_region or {v=ocr_region}. When set, it overrides the drawn region at run time.</string>
+    <string name="region_use_percent">Use Percentages</string>
+    <string name="desc_region_use_percent">Off: actual pixels. On: integer percentages (0-100).</string>
+    <string name="region_mode_title">Region Input Mode</string>
+    <string name="region_mode_single">Combined</string>
+    <string name="region_mode_separate">Separate</string>
+    <string name="label_region_spec_px">Region Variable / Pixels (Optional)</string>
+    <string name="label_region_spec_percent">Region Variable / Percent (Optional)</string>
+    <string name="placeholder_region_spec_px">%ocr_region, e.g. 100,300,900,1200</string>
+    <string name="placeholder_region_spec_percent">%ocr_region or {v=ocr_region}, e.g. 0,25,100,75</string>
+    <string name="supporting_region_spec_px">Enter left,top,right,bottom as actual pixel integers. Tasker / MacroDroid variables are supported (e.g. %ocr_region, {v=ocr_region}). Non-empty variables override the region below at run time.</string>
+    <string name="supporting_region_spec_percent">Enter left,top,right,bottom as integer percentages (0-100). Tasker / MacroDroid variables are supported (e.g. %ocr_region, {v=ocr_region}). Non-empty variables override the region below at run time.</string>
+    <string name="label_region_var_left">Left (variable/value)</string>
+    <string name="label_region_var_top">Top (variable/value)</string>
+    <string name="label_region_var_right">Right (variable/value)</string>
+    <string name="label_region_var_bottom">Bottom (variable/value)</string>
+    <string name="supporting_region_var_px">All four fields are required. Enter actual pixel integers; variables are supported (e.g. %left, {v=left}). Non-empty variables override the drawn region at run time.</string>
+    <string name="supporting_region_var_percent">All four fields are required. Enter integer percentages (0-100); variables are supported (e.g. %left, {v=left}). Non-empty variables override the drawn region at run time.</string>
+    <string name="region_var_override_hint">At run time, non-empty variables take priority and override the drawn/pixel-tuned region below.</string>
     <string name="floating_service_capture_btn">Tap to Capture Region</string>
     <string name="floating_service_toast_hint">Switch to target screen before tapping capture</string>
     <string name="floating_service_notification_title">OCR Region Selection</string>

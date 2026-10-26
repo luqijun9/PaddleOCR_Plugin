@@ -26,6 +26,12 @@ class ScreenCaptureActivity : Activity() {
     private var regionRight: String = "1.0"
     private var regionBottom: String = "1.0"
     private var regionSpec: String = ""
+    private var regionMode: String = TaskerPluginConstants.REGION_MODE_SINGLE
+    private var regionUsePercent: Boolean = false
+    private var regionVarLeft: String = ""
+    private var regionVarTop: String = ""
+    private var regionVarRight: String = ""
+    private var regionVarBottom: String = ""
     private var pendingIntent: android.app.PendingIntent? = null
     private var isAppTest: Boolean = false
 
@@ -46,6 +52,12 @@ class ScreenCaptureActivity : Activity() {
         regionRight = intent.getStringExtra("regionRight") ?: "1.0"
         regionBottom = intent.getStringExtra("regionBottom") ?: "1.0"
         regionSpec = intent.getStringExtra("regionSpec") ?: ""
+        regionMode = intent.getStringExtra("regionMode") ?: TaskerPluginConstants.REGION_MODE_SINGLE
+        regionUsePercent = intent.getBooleanExtra("regionUsePercent", false)
+        regionVarLeft = intent.getStringExtra("regionVarLeft") ?: ""
+        regionVarTop = intent.getStringExtra("regionVarTop") ?: ""
+        regionVarRight = intent.getStringExtra("regionVarRight") ?: ""
+        regionVarBottom = intent.getStringExtra("regionVarBottom") ?: ""
         pendingIntent = intent.getParcelableExtra("pendingIntent")
         isAppTest = intent.getBooleanExtra("isAppTest", false)
         log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, isAppTest=$isAppTest")
@@ -86,6 +98,12 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("regionRight", regionRight)
                     putExtra("regionBottom", regionBottom)
                     putExtra("regionSpec", regionSpec)
+                    putExtra("regionMode", regionMode)
+                    putExtra("regionUsePercent", regionUsePercent)
+                    putExtra("regionVarLeft", regionVarLeft)
+                    putExtra("regionVarTop", regionVarTop)
+                    putExtra("regionVarRight", regionVarRight)
+                    putExtra("regionVarBottom", regionVarBottom)
                     putExtra("pendingIntent", pendingIntent)
                     putExtra("isAppTest", isAppTest)
                 }

@@ -27,7 +27,17 @@ object TaskerPluginConstants {
     const val BUNDLE_KEY_REGION_RIGHT = "region_right"
     const val BUNDLE_KEY_REGION_BOTTOM = "region_bottom"
     const val BUNDLE_KEY_REGION_SPEC = "region_spec"
+    const val BUNDLE_KEY_REGION_MODE = "region_mode"
+    const val BUNDLE_KEY_REGION_USE_PERCENT = "region_use_percent"
+    const val BUNDLE_KEY_REGION_VAR_LEFT = "region_var_left"
+    const val BUNDLE_KEY_REGION_VAR_TOP = "region_var_top"
+    const val BUNDLE_KEY_REGION_VAR_RIGHT = "region_var_right"
+    const val BUNDLE_KEY_REGION_VAR_BOTTOM = "region_var_bottom"
     const val BUNDLE_KEY_REGION_PREVIEW_FILE = "region_preview_file"
+
+    // Region input modes
+    const val REGION_MODE_SINGLE = "single"
+    const val REGION_MODE_SEPARATE = "separate"
 
     // Image source options
     const val IMAGE_SOURCE_SCREEN_CAPTURE = "screen_capture"

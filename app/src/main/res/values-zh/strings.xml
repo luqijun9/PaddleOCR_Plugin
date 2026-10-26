@@ -52,9 +52,24 @@
     <string name="region_top_px">上边界 (px)</string>
     <string name="region_right_px">右边界 (px)</string>
     <string name="region_bottom_px">下边界 (px)</string>
-    <string name="label_region_spec">范围变量 / 百分比（可选）</string>
-    <string name="placeholder_region_spec">%ocr_region 或 {v=ocr_region}，如 0,25,100,75</string>
-    <string name="supporting_region_spec">按 左,上,右,下 顺序填写（0-1 小数或 0-100 百分比），支持 Tasker / MacroDroid 变量（如 %ocr_region、{v=ocr_region}）。填写后运行时优先使用该值，覆盖上方框选区域。</string>
+    <string name="region_use_percent">使用百分比</string>
+    <string name="desc_region_use_percent">默认按实际像素传入；勾选后按 0-100 的整数百分比传入</string>
+    <string name="region_mode_title">区域传入方式</string>
+    <string name="region_mode_single">一次传四个</string>
+    <string name="region_mode_separate">分别传四个</string>
+    <string name="label_region_spec_px">范围变量 / 像素（可选）</string>
+    <string name="label_region_spec_percent">范围变量 / 百分比（可选）</string>
+    <string name="placeholder_region_spec_px">%ocr_region，如 100,300,900,1200</string>
+    <string name="placeholder_region_spec_percent">%ocr_region 或 {v=ocr_region}，如 0,25,100,75</string>
+    <string name="supporting_region_spec_px">按 左,上,右,下 顺序填写实际像素整数，支持 Tasker / MacroDroid 变量（如 %ocr_region、{v=ocr_region}）。运行时变量非空时优先使用并覆盖下方选区。</string>
+    <string name="supporting_region_spec_percent">按 左,上,右,下 顺序填写 0-100 的整数百分比，支持 Tasker / MacroDroid 变量（如 %ocr_region、{v=ocr_region}）。运行时变量非空时优先使用并覆盖下方选区。</string>
+    <string name="label_region_var_left">左边界（变量/数值）</string>
+    <string name="label_region_var_top">上边界（变量/数值）</string>
+    <string name="label_region_var_right">右边界（变量/数值）</string>
+    <string name="label_region_var_bottom">下边界（变量/数值）</string>
+    <string name="supporting_region_var_px">四项均需填写实际像素整数，支持变量（如 %left、{v=left}）。变量非空时覆盖下方框选/微调。</string>
+    <string name="supporting_region_var_percent">四项均需填写 0-100 的整数百分比，支持变量（如 %left、{v=left}）。变量非空时覆盖下方框选/微调。</string>
+    <string name="region_var_override_hint">运行时变量非空时优先使用变量选区，覆盖下方画框/像素微调</string>
     <string name="floating_service_capture_btn">点击截屏选区</string>
     <string name="floating_service_toast_hint">可以切换到目标界面再截图</string>
     <string name="floating_service_notification_title">OCR 屏幕区域画框选区</string>

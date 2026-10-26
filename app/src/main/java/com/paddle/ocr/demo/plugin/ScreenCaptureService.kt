@@ -86,6 +86,12 @@ class ScreenCaptureService : Service() {
         val regionRight = intent.getStringExtra("regionRight") ?: "1.0"
         val regionBottom = intent.getStringExtra("regionBottom") ?: "1.0"
         val regionSpec = intent.getStringExtra("regionSpec") ?: ""
+        val regionMode = intent.getStringExtra("regionMode") ?: TaskerPluginConstants.REGION_MODE_SINGLE
+        val regionUsePercent = intent.getBooleanExtra("regionUsePercent", false)
+        val regionVarLeft = intent.getStringExtra("regionVarLeft") ?: ""
+        val regionVarTop = intent.getStringExtra("regionVarTop") ?: ""
+        val regionVarRight = intent.getStringExtra("regionVarRight") ?: ""
+        val regionVarBottom = intent.getStringExtra("regionVarBottom") ?: ""
         val pendingIntent: android.app.PendingIntent? = intent.getParcelableExtra("pendingIntent")
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
@@ -115,6 +121,12 @@ class ScreenCaptureService : Service() {
             regionRight = regionRight,
             regionBottom = regionBottom,
             regionSpec = regionSpec,
+            regionMode = regionMode,
+            regionUsePercent = regionUsePercent,
+            regionVarLeft = regionVarLeft,
+            regionVarTop = regionVarTop,
+            regionVarRight = regionVarRight,
+            regionVarBottom = regionVarBottom,
             pendingIntent = pendingIntent,
             isAppTest = isAppTest
         )
@@ -134,6 +146,12 @@ class ScreenCaptureService : Service() {
         regionRight: String,
         regionBottom: String,
         regionSpec: String,
+        regionMode: String,
+        regionUsePercent: Boolean,
+        regionVarLeft: String,
+        regionVarTop: String,
+        regionVarRight: String,
+        regionVarBottom: String,
         pendingIntent: android.app.PendingIntent?,
         isAppTest: Boolean
     ) {
@@ -232,6 +250,12 @@ class ScreenCaptureService : Service() {
                         regionRight = regionRight,
                         regionBottom = regionBottom,
                         regionSpec = regionSpec,
+                        regionMode = regionMode,
+                        regionUsePercent = regionUsePercent,
+                        regionVarLeft = regionVarLeft,
+                        regionVarTop = regionVarTop,
+                        regionVarRight = regionVarRight,
+                        regionVarBottom = regionVarBottom,
                         pendingIntent = pendingIntent,
                         isAppTest = isAppTest
                     )
@@ -263,6 +287,12 @@ class ScreenCaptureService : Service() {
         regionRight: String,
         regionBottom: String,
         regionSpec: String,
+        regionMode: String,
+        regionUsePercent: Boolean,
+        regionVarLeft: String,
+        regionVarTop: String,
+        regionVarRight: String,
+        regionVarBottom: String,
         pendingIntent: android.app.PendingIntent?,
         isAppTest: Boolean
     ) {
@@ -278,7 +308,13 @@ class ScreenCaptureService : Service() {
             regionTop = regionTop,
             regionRight = regionRight,
             regionBottom = regionBottom,
-            regionSpec = regionSpec
+            regionSpec = regionSpec,
+            regionMode = regionMode,
+            regionUsePercent = regionUsePercent,
+            regionVarLeft = regionVarLeft,
+            regionVarTop = regionVarTop,
+            regionVarRight = regionVarRight,
+            regionVarBottom = regionVarBottom
         )
         log("OcrResultProcessor returned success=${result.success}, matchFound=${result.matchFound}, error=${result.errorMessage}")
 

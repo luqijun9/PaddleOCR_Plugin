@@ -127,27 +127,89 @@ object OcrResultProcessor {
         }
     }
 
+    private fun cropBitmapByPixelBounds(
+        bitmap: Bitmap,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int
+    ): CropResult {
+        return try {
+            val bW = bitmap.width
+            val bH = bitmap.height
+            val cropLeft = left.coerceIn(0, bW)
+            val cropTop = top.coerceIn(0, bH)
+            val cropRight = right.coerceIn(0, bW)
+            val cropBottom = bottom.coerceIn(0, bH)
+
+            val cropWidth = cropRight - cropLeft
+            val cropHeight = cropBottom - cropTop
+
+            if (cropWidth > 0 && cropHeight > 0 && (cropWidth < bW || cropHeight < bH)) {
+                val cropped = Bitmap.createBitmap(bitmap, cropLeft, cropTop, cropWidth, cropHeight)
+                CropResult(cropped, cropLeft, cropTop, true)
+            } else {
+                CropResult(bitmap, 0, 0, false)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "[$SUB_TAG] Failed to crop bitmap by pixel bounds: ${e.message}", e)
+            CropResult(bitmap, 0, 0, false)
+        }
+    }
+
     /**
      * 解析 "左,上,右,下" 区域字符串。
-     * 支持 0-1 小数或 0-100 百分比（任一值大于 1 时按百分比处理）。
+     * usePercent=true 时要求 0-100 的整数百分比，否则要求实际像素整数。
      * 格式非法或区域为空时返回 null。
      */
-    fun parseRegionSpec(spec: String): FloatArray? {
+    fun parseRegionSpec(spec: String, usePercent: Boolean): IntArray? {
         val parts = spec.split(Regex("[,，;；\\s]+")).filter { it.isNotEmpty() }
-        if (parts.size != 4) return null
-        val values = FloatArray(4)
+        return parseRegionValues(parts, usePercent)
+    }
+
+    /**
+     * 解析分开传入的四项边界值，任一项缺失或非法时返回 null。
+     */
+    fun parseRegionValues(values: List<String>, usePercent: Boolean): IntArray? {
+        if (values.size != 4) return null
+        val nums = IntArray(4)
         for (i in 0..3) {
-            val v = parts[i].toFloatOrNull() ?: return null
-            if (!v.isFinite() || v < 0f) return null
-            values[i] = v
+            val v = values[i].trim().toIntOrNull() ?: return null
+            if (v < 0) return null
+            if (usePercent && v > 100) return null
+            nums[i] = v
         }
-        val isPercent = values.any { it > 1f }
-        for (i in 0..3) {
-            if (isPercent) values[i] /= 100f
-            if (values[i] > 1f) return null
+        if (nums[2] <= nums[0] || nums[3] <= nums[1]) return null
+        return nums
+    }
+
+    /**
+     * 将变量区域（整数百分比或实际像素）换算为当前截图的像素边界；越界或空选区返回 null。
+     */
+    private fun toPixelBounds(values: IntArray, bitmap: Bitmap, usePercent: Boolean): IntArray? {
+        val bW = bitmap.width
+        val bH = bitmap.height
+        if (bW <= 0 || bH <= 0) return null
+
+        val left: Int
+        val top: Int
+        val right: Int
+        val bottom: Int
+        if (usePercent) {
+            left = values[0] * bW / 100
+            top = values[1] * bH / 100
+            right = values[2] * bW / 100
+            bottom = values[3] * bH / 100
+        } else {
+            left = values[0]
+            top = values[1]
+            right = values[2]
+            bottom = values[3]
         }
-        if (values[2] <= values[0] || values[3] <= values[1]) return null
-        return values
+
+        if (left < 0 || top < 0 || right > bW || bottom > bH) return null
+        if (right <= left || bottom <= top) return null
+        return intArrayOf(left, top, right, bottom)
     }
 
     suspend fun process(
@@ -161,27 +223,56 @@ object OcrResultProcessor {
         regionTop: String = "0.0",
         regionRight: String = "1.0",
         regionBottom: String = "1.0",
-        regionSpec: String = ""
+        regionSpec: String = "",
+        regionMode: String = TaskerPluginConstants.REGION_MODE_SINGLE,
+        regionUsePercent: Boolean = false,
+        regionVarLeft: String = "",
+        regionVarTop: String = "",
+        regionVarRight: String = "",
+        regionVarBottom: String = ""
     ): OcrProcessResult {
-        // 区域变量优先于固定边界（宿主运行时会把 Tasker/MacroDroid 变量替换为实际百分比字符串）
-        var effectiveLeft = regionLeft
-        var effectiveTop = regionTop
-        var effectiveRight = regionRight
-        var effectiveBottom = regionBottom
-        if (restrictRegion && regionSpec.isNotBlank()) {
-            val parsed = parseRegionSpec(regionSpec)
-            if (parsed == null) {
-                Log.e(TAG, "[$SUB_TAG] Invalid region spec: $regionSpec")
-                return OcrProcessResult(
+        // 区域变量优先于固定边界（宿主运行时会把 Tasker/MacroDroid 变量替换为实际数值）
+        var pixelBounds: IntArray? = null
+        if (restrictRegion) {
+            val parsed: IntArray? = if (regionMode == TaskerPluginConstants.REGION_MODE_SEPARATE) {
+                val values = listOf(regionVarLeft, regionVarTop, regionVarRight, regionVarBottom)
+                if (values.any { it.isNotBlank() }) {
+                    parseRegionValues(values, regionUsePercent) ?: return OcrProcessResult(
+                        success = false,
+                        errorMessage = if (regionUsePercent)
+                            "分开范围变量格式无效: 左/上/右/下 需为 0-100 的整数百分比，当前: ${values.joinToString(",")}"
+                        else
+                            "分开范围变量格式无效: 左/上/右/下 需为实际像素整数，当前: ${values.joinToString(",")}"
+                    )
+                } else {
+                    null
+                }
+            } else if (regionSpec.isNotBlank()) {
+                parseRegionSpec(regionSpec, regionUsePercent) ?: return OcrProcessResult(
                     success = false,
-                    errorMessage = "范围变量格式无效: \"$regionSpec\"，应为 左,上,右,下（如 0,25,100,75）"
+                    errorMessage = if (regionUsePercent)
+                        "范围变量格式无效: \"$regionSpec\"，应为 左,上,右,下 四个 0-100 的整数百分比（如 0,25,100,75）"
+                    else
+                        "范围变量格式无效: \"$regionSpec\"，应为 左,上,右,下 四个实际像素整数（如 100,300,900,1200）"
                 )
+            } else {
+                null
             }
-            effectiveLeft = parsed[0].toString()
-            effectiveTop = parsed[1].toString()
-            effectiveRight = parsed[2].toString()
-            effectiveBottom = parsed[3].toString()
-            Log.d(TAG, "[$SUB_TAG] Region spec resolved: ${effectiveLeft}, ${effectiveTop}, ${effectiveRight}, ${effectiveBottom}")
+
+            if (parsed != null) {
+                val bounds = toPixelBounds(parsed, bitmap, regionUsePercent)
+                if (bounds == null) {
+                    return OcrProcessResult(
+                        success = false,
+                        errorMessage = if (regionUsePercent)
+                            "范围变量换算后选区无效: ${parsed.joinToString(",")}（百分比），截图尺寸: ${bitmap.width}x${bitmap.height}"
+                        else
+                            "范围变量超出截图尺寸: ${parsed.joinToString(",")}（像素），截图尺寸: ${bitmap.width}x${bitmap.height}"
+                    )
+                }
+                pixelBounds = bounds
+                Log.d(TAG, "[$SUB_TAG] Region variables resolved to pixels: ${bounds.joinToString(",")} (${if (regionUsePercent) "percent" else "pixel"} input)")
+            }
         }
 
         val ocrEngine = OCRApplication.instance.awaitModelReady(timeoutMs = 10000)
@@ -193,7 +284,12 @@ object OcrResultProcessor {
             )
         }
 
-        val cropResult = cropBitmapIfNeeded(bitmap, restrictRegion, effectiveLeft, effectiveTop, effectiveRight, effectiveBottom)
+        val resolvedPixels = pixelBounds
+        val cropResult = if (resolvedPixels != null) {
+            cropBitmapByPixelBounds(bitmap, resolvedPixels[0], resolvedPixels[1], resolvedPixels[2], resolvedPixels[3])
+        } else {
+            cropBitmapIfNeeded(bitmap, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
+        }
         val inferenceBitmap = cropResult.croppedBitmap
         val offsetX = cropResult.offsetX
         val offsetY = cropResult.offsetY
