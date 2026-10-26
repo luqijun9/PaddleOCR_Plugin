@@ -102,12 +102,10 @@ jobs:
           fetch-depth: 0
 
       - name: Extract Tag Message
-        id: tag_msg
         run: |
-          TAG_NOTES=$(git tag -l --format='%(contents)' ${{ github.ref_name }})
-          echo "tag_notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$TAG_NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          git fetch --tags --force
+          git tag -l --format='%(contents)' ${{ github.ref_name }} > release_notes.md
+          cat release_notes.md
 
       - name: Download all APK artifacts
         uses: actions/download-artifact@v4
@@ -123,7 +121,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           files: all-apks/*.apk
-          body: ${{ steps.tag_msg.outputs.tag_notes }}
-          generate_release_notes: true
+          body_path: release_notes.md
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
