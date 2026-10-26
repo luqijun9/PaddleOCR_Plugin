@@ -54,10 +54,12 @@
     <string name="region_bottom_px">下边界 (px)</string>
     <string name="region_use_percent">使用百分比</string>
     <string name="desc_region_use_percent">默认按实际像素传入；勾选后按 0-100 的整数百分比传入</string>
-    <string name="region_mode_title">区域传入方式</string>
-    <string name="region_mode_single">一次传四个</string>
-    <string name="region_mode_separate">分别传四个</string>
-    <string name="region_mode_xywh">起点与宽高</string>
+    <string name="region_mode_title">区域坐标模式</string>
+    <string name="region_coord_ltrb">四边界模式</string>
+    <string name="region_coord_xywh">起点与宽高</string>
+    <string name="region_format_title">边界传入形式</string>
+    <string name="region_format_single">合并单串</string>
+    <string name="region_format_separate">四项分开</string>
     <string name="label_region_spec_px">范围变量 / 像素（可选）</string>
     <string name="label_region_spec_percent">范围变量 / 百分比（可选）</string>
     <string name="placeholder_region_spec_px">%ocr_region，如 100,300,900,1200</string>

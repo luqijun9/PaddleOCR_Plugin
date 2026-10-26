@@ -476,6 +476,12 @@ fun ActionEditScreen(
     var regionBottom by remember { mutableStateOf(initialRegionBottom) }
     var regionSpec by remember { mutableStateOf(initialRegionSpec) }
     var regionMode by remember { mutableStateOf(initialRegionMode) }
+    var regionCoordType by remember {
+        mutableStateOf(if (initialRegionMode == TaskerPluginConstants.REGION_MODE_XYWH) "xywh" else "ltrb")
+    }
+    var ltrbFormat by remember {
+        mutableStateOf(if (initialRegionMode == TaskerPluginConstants.REGION_MODE_SEPARATE) TaskerPluginConstants.REGION_MODE_SEPARATE else TaskerPluginConstants.REGION_MODE_SINGLE)
+    }
     var regionUsePercent by remember { mutableStateOf(initialRegionUsePercent) }
     var regionVarLeft by remember { mutableStateOf(initialRegionVarLeft) }
     var regionVarTop by remember { mutableStateOf(initialRegionVarTop) }
@@ -1219,7 +1225,7 @@ fun ActionEditScreen(
                             }
                         }
 
-                        // 区域传入方式：合并传四个 / 分别传四个
+                        // 第一级：区域坐标模式（四边界模式 vs 起点宽高）
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = stringResource(R.string.region_mode_title),
@@ -1228,25 +1234,57 @@ fun ActionEditScreen(
                             )
                             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                                 SegmentedButton(
-                                    selected = regionMode == TaskerPluginConstants.REGION_MODE_SINGLE,
-                                    onClick = { regionMode = TaskerPluginConstants.REGION_MODE_SINGLE },
-                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
+                                    selected = regionCoordType == "ltrb",
+                                    onClick = {
+                                        regionCoordType = "ltrb"
+                                        regionMode = ltrbFormat
+                                    },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                                 ) {
-                                    Text(stringResource(R.string.region_mode_single))
+                                    Text(stringResource(R.string.region_coord_ltrb))
                                 }
                                 SegmentedButton(
-                                    selected = regionMode == TaskerPluginConstants.REGION_MODE_SEPARATE,
-                                    onClick = { regionMode = TaskerPluginConstants.REGION_MODE_SEPARATE },
-                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
+                                    selected = regionCoordType == "xywh",
+                                    onClick = {
+                                        regionCoordType = "xywh"
+                                        regionMode = TaskerPluginConstants.REGION_MODE_XYWH
+                                    },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                                 ) {
-                                    Text(stringResource(R.string.region_mode_separate))
+                                    Text(stringResource(R.string.region_coord_xywh))
                                 }
-                                SegmentedButton(
-                                    selected = regionMode == TaskerPluginConstants.REGION_MODE_XYWH,
-                                    onClick = { regionMode = TaskerPluginConstants.REGION_MODE_XYWH },
-                                    shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
-                                ) {
-                                    Text(stringResource(R.string.region_mode_xywh))
+                            }
+                        }
+
+                        // 第二级：四边界模式下的传入形式（合并单串 vs 四项分开）
+                        if (regionCoordType == "ltrb") {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = stringResource(R.string.region_format_title),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                                    SegmentedButton(
+                                        selected = ltrbFormat == TaskerPluginConstants.REGION_MODE_SINGLE,
+                                        onClick = {
+                                            ltrbFormat = TaskerPluginConstants.REGION_MODE_SINGLE
+                                            regionMode = TaskerPluginConstants.REGION_MODE_SINGLE
+                                        },
+                                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                                    ) {
+                                        Text(stringResource(R.string.region_format_single))
+                                    }
+                                    SegmentedButton(
+                                        selected = ltrbFormat == TaskerPluginConstants.REGION_MODE_SEPARATE,
+                                        onClick = {
+                                            ltrbFormat = TaskerPluginConstants.REGION_MODE_SEPARATE
+                                            regionMode = TaskerPluginConstants.REGION_MODE_SEPARATE
+                                        },
+                                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                                    ) {
+                                        Text(stringResource(R.string.region_format_separate))
+                                    }
                                 }
                             }
                         }

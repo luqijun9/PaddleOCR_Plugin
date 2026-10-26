@@ -54,10 +54,12 @@
     <string name="region_bottom_px">Bottom (px)</string>
     <string name="region_use_percent">Use Percentages</string>
     <string name="desc_region_use_percent">Off: actual pixels. On: integer percentages (0-100).</string>
-    <string name="region_mode_title">Region Input Mode</string>
-    <string name="region_mode_single">Combined</string>
-    <string name="region_mode_separate">Separate</string>
-    <string name="region_mode_xywh">Origin &amp; Size</string>
+    <string name="region_mode_title">Coordinate Mode</string>
+    <string name="region_coord_ltrb">Four Boundaries</string>
+    <string name="region_coord_xywh">Origin &amp; Size</string>
+    <string name="region_format_title">Boundary Format</string>
+    <string name="region_format_single">Merged String</string>
+    <string name="region_format_separate">Separate Fields</string>
     <string name="label_region_spec_px">Region Variable / Pixels (Optional)</string>
     <string name="label_region_spec_percent">Region Variable / Percent (Optional)</string>
     <string name="placeholder_region_spec_px">%ocr_region, e.g. 100,300,900,1200</string>
