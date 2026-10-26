@@ -30,54 +30,32 @@ data class OcrProcessResult(
     fun toTaskerBundle(): Bundle {
         return Bundle().apply {
             if (success) {
-                // Tasker 风格（带 %）
                 putString("%ocr_full_text", fullText)
                 putString("%ocr_json", json)
                 putString("%errmsg", "")
-                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "")
-
-                // MacroDroid 兼容风格（不带 %，双重写入确保无论是何种映射规则都能成功赋值）
-                putString("ocr_full_text", fullText)
-                putString("ocr_json", json)
-                putString("errmsg", "")
 
                 if (hasTargetText) {
                     putString("%match_found", matchFound.toString())
-                    putString("match_found", matchFound.toString())
                     if (matchFound && matchCenterX != null && matchCenterY != null) {
                         putString("%match_center_x", matchCenterX.toString())
                         putString("%match_center_y", matchCenterY.toString())
-                        putString("match_center_x", matchCenterX.toString())
-                        putString("match_center_y", matchCenterY.toString())
                     } else {
                         putString("%match_center_x", "")
                         putString("%match_center_y", "")
-                        putString("match_center_x", "")
-                        putString("match_center_y", "")
                     }
                 } else {
                     putString("%match_found", "")
-                    putString("match_found", "")
                     putString("%match_center_x", "")
                     putString("%match_center_y", "")
-                    putString("match_center_x", "")
-                    putString("match_center_y", "")
                 }
             } else {
                 val err = errorMessage ?: "未知错误"
                 putString("%ocr_full_text", "")
-                putString("ocr_full_text", "")
                 putString("%ocr_json", "")
-                putString("ocr_json", "")
                 putString("%match_found", "")
-                putString("match_found", "")
                 putString("%match_center_x", "")
-                putString("match_center_x", "")
                 putString("%match_center_y", "")
-                putString("match_center_y", "")
                 putString("%errmsg", err)
-                putString("errmsg", err)
-                putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, err)
             }
         }
     }
