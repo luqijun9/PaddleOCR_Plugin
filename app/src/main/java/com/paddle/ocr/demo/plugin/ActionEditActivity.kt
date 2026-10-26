@@ -76,6 +76,7 @@ class ActionEditActivity : ComponentActivity() {
     private var initialRegionTop: String = "0.0"
     private var initialRegionRight: String = "1.0"
     private var initialRegionBottom: String = "1.0"
+    private var initialRegionSpec: String = ""
     private var initialRegionPreviewFile: String = ""
     private var instanceId: String = ""
 
@@ -200,6 +201,7 @@ class ActionEditActivity : ComponentActivity() {
                 initialRegionTop = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, "0.0")
                 initialRegionRight = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, "1.0")
                 initialRegionBottom = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, "1.0")
+                initialRegionSpec = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_SPEC, "")
                 initialRegionPreviewFile = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_PREVIEW_FILE, "")
                 instanceId = bundle.getString("plugin_instance_id") ?: UUID.randomUUID().toString()
             }
@@ -222,6 +224,7 @@ class ActionEditActivity : ComponentActivity() {
                     initialRegionTop = initialRegionTop,
                     initialRegionRight = initialRegionRight,
                     initialRegionBottom = initialRegionBottom,
+                    initialRegionSpec = initialRegionSpec,
                     initialRegionPreviewFile = initialRegionPreviewFile,
                     regionResultFlow = regionResultFlow,
                     regionPreviewFlow = regionPreviewFlow,
@@ -231,7 +234,7 @@ class ActionEditActivity : ComponentActivity() {
                     onLaunchInPlaceRegionDraw = { bitmap, restrict, left, top, right, bottom ->
                         requestInPlaceRegionDraw(bitmap, restrict, left, top, right, bottom)
                     },
-                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom, regionPreviewFile ->
+                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom, regionSpec, regionPreviewFile ->
                         saveAndFinish(
                             imageSource,
                             imagePath,
@@ -244,6 +247,7 @@ class ActionEditActivity : ComponentActivity() {
                             regionTop,
                             regionRight,
                             regionBottom,
+                            regionSpec,
                             regionPreviewFile
                         )
                     },
@@ -267,6 +271,7 @@ class ActionEditActivity : ComponentActivity() {
         regionTop: String,
         regionRight: String,
         regionBottom: String,
+        regionSpec: String,
         regionPreviewFile: String
     ) {
         val resultIntent = Intent()
@@ -282,6 +287,7 @@ class ActionEditActivity : ComponentActivity() {
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP, regionTop)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT, regionRight)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM, regionBottom)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_SPEC, regionSpec)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_PREVIEW_FILE, regionPreviewFile)
             putString("plugin_instance_id", instanceId)
         }
@@ -340,7 +346,8 @@ class ActionEditActivity : ComponentActivity() {
                     TaskerPluginConstants.BUNDLE_KEY_REGION_LEFT,
                     TaskerPluginConstants.BUNDLE_KEY_REGION_TOP,
                     TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT,
-                    TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_SPEC
                 )
             )
         }
@@ -367,12 +374,13 @@ fun ActionEditScreen(
     initialRegionTop: String,
     initialRegionRight: String,
     initialRegionBottom: String,
+    initialRegionSpec: String,
     initialRegionPreviewFile: String,
     regionResultFlow: StateFlow<FloatArray?>,
     regionPreviewFlow: StateFlow<String?>,
     onLaunchScreenCapture: (Boolean, String, String, String, String) -> Unit,
     onLaunchInPlaceRegionDraw: (Bitmap, Boolean, String, String, String, String) -> Unit,
-    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String, String) -> Unit,
+    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String, String, String) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
@@ -388,6 +396,7 @@ fun ActionEditScreen(
     var regionTop by remember { mutableStateOf(initialRegionTop) }
     var regionRight by remember { mutableStateOf(initialRegionRight) }
     var regionBottom by remember { mutableStateOf(initialRegionBottom) }
+    var regionSpec by remember { mutableStateOf(initialRegionSpec) }
     var regionPreviewFile by remember { mutableStateOf(initialRegionPreviewFile) }
 
     val initialHasCustomRegion = initialRestrictRegion &&
@@ -508,6 +517,7 @@ fun ActionEditScreen(
             regionTop,
             regionRight,
             regionBottom,
+            regionSpec,
             regionPreviewFile
         )
     }
@@ -544,6 +554,7 @@ fun ActionEditScreen(
                             regionTop,
                             regionRight,
                             regionBottom,
+                            regionSpec,
                             regionPreviewFile
                         )
                     }) {
@@ -592,6 +603,7 @@ fun ActionEditScreen(
                                 regionTop,
                                 regionRight,
                                 regionBottom,
+                                regionSpec,
                                 regionPreviewFile
                             )
                         },
@@ -1060,6 +1072,27 @@ fun ActionEditScreen(
 
                     if (restrictRegion) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                        OutlinedTextField(
+                            value = regionSpec,
+                            onValueChange = { regionSpec = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.label_region_spec)) },
+                            placeholder = { Text(stringResource(R.string.placeholder_region_spec)) },
+                            supportingText = { Text(stringResource(R.string.supporting_region_spec)) },
+                            trailingIcon = {
+                                if (regionSpec.isNotEmpty()) {
+                                    IconButton(onClick = { regionSpec = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Clear,
+                                            contentDescription = stringResource(R.string.btn_clear)
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
 
                         val dm = context.resources.displayMetrics
                         val screenW = dm.widthPixels

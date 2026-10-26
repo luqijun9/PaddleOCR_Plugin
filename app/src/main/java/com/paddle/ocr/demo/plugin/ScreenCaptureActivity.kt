@@ -25,6 +25,7 @@ class ScreenCaptureActivity : Activity() {
     private var regionTop: String = "0.0"
     private var regionRight: String = "1.0"
     private var regionBottom: String = "1.0"
+    private var regionSpec: String = ""
     private var pendingIntent: android.app.PendingIntent? = null
     private var isAppTest: Boolean = false
 
@@ -44,6 +45,7 @@ class ScreenCaptureActivity : Activity() {
         regionTop = intent.getStringExtra("regionTop") ?: "0.0"
         regionRight = intent.getStringExtra("regionRight") ?: "1.0"
         regionBottom = intent.getStringExtra("regionBottom") ?: "1.0"
+        regionSpec = intent.getStringExtra("regionSpec") ?: ""
         pendingIntent = intent.getParcelableExtra("pendingIntent")
         isAppTest = intent.getBooleanExtra("isAppTest", false)
         log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, isAppTest=$isAppTest")
@@ -83,6 +85,7 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("regionTop", regionTop)
                     putExtra("regionRight", regionRight)
                     putExtra("regionBottom", regionBottom)
+                    putExtra("regionSpec", regionSpec)
                     putExtra("pendingIntent", pendingIntent)
                     putExtra("isAppTest", isAppTest)
                 }

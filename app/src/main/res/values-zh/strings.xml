@@ -52,6 +52,9 @@
     <string name="region_top_px">上边界 (px)</string>
     <string name="region_right_px">右边界 (px)</string>
     <string name="region_bottom_px">下边界 (px)</string>
+    <string name="label_region_spec">范围变量 / 百分比（可选）</string>
+    <string name="placeholder_region_spec">%ocr_region 或 {v=ocr_region}，如 0,25,100,75</string>
+    <string name="supporting_region_spec">按 左,上,右,下 顺序填写（0-1 小数或 0-100 百分比），支持 Tasker / MacroDroid 变量（如 %ocr_region、{v=ocr_region}）。填写后运行时优先使用该值，覆盖上方框选区域。</string>
     <string name="floating_service_capture_btn">点击截屏选区</string>
     <string name="floating_service_toast_hint">可以切换到目标界面再截图</string>
     <string name="floating_service_notification_title">OCR 屏幕区域画框选区</string>

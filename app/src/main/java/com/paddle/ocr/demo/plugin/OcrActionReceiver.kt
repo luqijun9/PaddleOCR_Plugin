@@ -69,10 +69,11 @@ class OcrActionReceiver : BroadcastReceiver() {
         val regionTop = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_TOP) ?: "0.0"
         val regionRight = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_RIGHT) ?: "1.0"
         val regionBottom = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_BOTTOM) ?: "1.0"
+        val regionSpec = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_SPEC) ?: ""
         val imageSource = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_SOURCE) ?: TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE
         val imagePath = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH) ?: ""
 
-        log("targetText='$targetText', isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, imageSource=$imageSource, imagePath='$imagePath'")
+        log("targetText='$targetText', isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, regionSpec='$regionSpec', imageSource=$imageSource, imagePath='$imagePath'")
 
         // 4. 设置 RESULT_CODE_PENDING
         if (isOrderedBroadcast) {
@@ -114,7 +115,8 @@ class OcrActionReceiver : BroadcastReceiver() {
                                 regionLeft = regionLeft,
                                 regionTop = regionTop,
                                 regionRight = regionRight,
-                                regionBottom = regionBottom
+                                regionBottom = regionBottom,
+                                regionSpec = regionSpec
                             )
                             try {
                                 if (!loadResult.bitmap.isRecycled) {
@@ -210,7 +212,8 @@ class OcrActionReceiver : BroadcastReceiver() {
                             regionLeft = regionLeft,
                             regionTop = regionTop,
                             regionRight = regionRight,
-                            regionBottom = regionBottom
+                            regionBottom = regionBottom,
+                            regionSpec = regionSpec
                         )
                         try {
                             if (!bitmap.isRecycled) bitmap.recycle()
@@ -275,6 +278,7 @@ class OcrActionReceiver : BroadcastReceiver() {
             putExtra("regionTop", regionTop)
             putExtra("regionRight", regionRight)
             putExtra("regionBottom", regionBottom)
+            putExtra("regionSpec", regionSpec)
             putExtra("pendingIntent", pendingIntent)
         }
         log("captureIntent created")

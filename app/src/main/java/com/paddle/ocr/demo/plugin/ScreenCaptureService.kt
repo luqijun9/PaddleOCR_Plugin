@@ -85,6 +85,7 @@ class ScreenCaptureService : Service() {
         val regionTop = intent.getStringExtra("regionTop") ?: "0.0"
         val regionRight = intent.getStringExtra("regionRight") ?: "1.0"
         val regionBottom = intent.getStringExtra("regionBottom") ?: "1.0"
+        val regionSpec = intent.getStringExtra("regionSpec") ?: ""
         val pendingIntent: android.app.PendingIntent? = intent.getParcelableExtra("pendingIntent")
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
@@ -113,6 +114,7 @@ class ScreenCaptureService : Service() {
             regionTop = regionTop,
             regionRight = regionRight,
             regionBottom = regionBottom,
+            regionSpec = regionSpec,
             pendingIntent = pendingIntent,
             isAppTest = isAppTest
         )
@@ -131,6 +133,7 @@ class ScreenCaptureService : Service() {
         regionTop: String,
         regionRight: String,
         regionBottom: String,
+        regionSpec: String,
         pendingIntent: android.app.PendingIntent?,
         isAppTest: Boolean
     ) {
@@ -228,6 +231,7 @@ class ScreenCaptureService : Service() {
                         regionTop = regionTop,
                         regionRight = regionRight,
                         regionBottom = regionBottom,
+                        regionSpec = regionSpec,
                         pendingIntent = pendingIntent,
                         isAppTest = isAppTest
                     )
@@ -258,6 +262,7 @@ class ScreenCaptureService : Service() {
         regionTop: String,
         regionRight: String,
         regionBottom: String,
+        regionSpec: String,
         pendingIntent: android.app.PendingIntent?,
         isAppTest: Boolean
     ) {
@@ -272,7 +277,8 @@ class ScreenCaptureService : Service() {
             regionLeft = regionLeft,
             regionTop = regionTop,
             regionRight = regionRight,
-            regionBottom = regionBottom
+            regionBottom = regionBottom,
+            regionSpec = regionSpec
         )
         log("OcrResultProcessor returned success=${result.success}, matchFound=${result.matchFound}, error=${result.errorMessage}")
 

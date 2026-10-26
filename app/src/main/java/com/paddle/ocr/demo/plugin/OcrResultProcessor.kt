@@ -127,6 +127,29 @@ object OcrResultProcessor {
         }
     }
 
+    /**
+     * 解析 "左,上,右,下" 区域字符串。
+     * 支持 0-1 小数或 0-100 百分比（任一值大于 1 时按百分比处理）。
+     * 格式非法或区域为空时返回 null。
+     */
+    fun parseRegionSpec(spec: String): FloatArray? {
+        val parts = spec.split(Regex("[,，;；\\s]+")).filter { it.isNotEmpty() }
+        if (parts.size != 4) return null
+        val values = FloatArray(4)
+        for (i in 0..3) {
+            val v = parts[i].toFloatOrNull() ?: return null
+            if (!v.isFinite() || v < 0f) return null
+            values[i] = v
+        }
+        val isPercent = values.any { it > 1f }
+        for (i in 0..3) {
+            if (isPercent) values[i] /= 100f
+            if (values[i] > 1f) return null
+        }
+        if (values[2] <= values[0] || values[3] <= values[1]) return null
+        return values
+    }
+
     suspend fun process(
         bitmap: Bitmap,
         targetText: String,
@@ -137,8 +160,30 @@ object OcrResultProcessor {
         regionLeft: String = "0.0",
         regionTop: String = "0.0",
         regionRight: String = "1.0",
-        regionBottom: String = "1.0"
+        regionBottom: String = "1.0",
+        regionSpec: String = ""
     ): OcrProcessResult {
+        // 区域变量优先于固定边界（宿主运行时会把 Tasker/MacroDroid 变量替换为实际百分比字符串）
+        var effectiveLeft = regionLeft
+        var effectiveTop = regionTop
+        var effectiveRight = regionRight
+        var effectiveBottom = regionBottom
+        if (restrictRegion && regionSpec.isNotBlank()) {
+            val parsed = parseRegionSpec(regionSpec)
+            if (parsed == null) {
+                Log.e(TAG, "[$SUB_TAG] Invalid region spec: $regionSpec")
+                return OcrProcessResult(
+                    success = false,
+                    errorMessage = "范围变量格式无效: \"$regionSpec\"，应为 左,上,右,下（如 0,25,100,75）"
+                )
+            }
+            effectiveLeft = parsed[0].toString()
+            effectiveTop = parsed[1].toString()
+            effectiveRight = parsed[2].toString()
+            effectiveBottom = parsed[3].toString()
+            Log.d(TAG, "[$SUB_TAG] Region spec resolved: ${effectiveLeft}, ${effectiveTop}, ${effectiveRight}, ${effectiveBottom}")
+        }
+
         val ocrEngine = OCRApplication.instance.awaitModelReady(timeoutMs = 10000)
         if (ocrEngine == null) {
             Log.e(TAG, "[$SUB_TAG] OCR Engine is NULL - initialization timed out or failed!")
@@ -148,7 +193,7 @@ object OcrResultProcessor {
             )
         }
 
-        val cropResult = cropBitmapIfNeeded(bitmap, restrictRegion, regionLeft, regionTop, regionRight, regionBottom)
+        val cropResult = cropBitmapIfNeeded(bitmap, restrictRegion, effectiveLeft, effectiveTop, effectiveRight, effectiveBottom)
         val inferenceBitmap = cropResult.croppedBitmap
         val offsetX = cropResult.offsetX
         val offsetY = cropResult.offsetY

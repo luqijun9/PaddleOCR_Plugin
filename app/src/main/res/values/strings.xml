@@ -52,6 +52,9 @@
     <string name="region_top_px">Top (px)</string>
     <string name="region_right_px">Right (px)</string>
     <string name="region_bottom_px">Bottom (px)</string>
+    <string name="label_region_spec">Region Variable / Percent (Optional)</string>
+    <string name="placeholder_region_spec">%ocr_region or {v=ocr_region}, e.g. 0,25,100,75</string>
+    <string name="supporting_region_spec">Enter left,top,right,bottom (0-1 decimals or 0-100 percent). Tasker / MacroDroid variables are supported, e.g. %ocr_region or {v=ocr_region}. When set, it overrides the drawn region at run time.</string>
     <string name="floating_service_capture_btn">Tap to Capture Region</string>
     <string name="floating_service_toast_hint">Switch to target screen before tapping capture</string>
     <string name="floating_service_notification_title">OCR Region Selection</string>
