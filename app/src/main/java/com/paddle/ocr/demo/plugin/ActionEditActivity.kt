@@ -83,6 +83,10 @@ class ActionEditActivity : ComponentActivity() {
     private var initialRegionVarTop: String = ""
     private var initialRegionVarRight: String = ""
     private var initialRegionVarBottom: String = ""
+    private var initialRegionVarX: String = ""
+    private var initialRegionVarY: String = ""
+    private var initialRegionVarW: String = ""
+    private var initialRegionVarH: String = ""
     private var initialRegionPreviewFile: String = ""
     private var instanceId: String = ""
 
@@ -214,6 +218,10 @@ class ActionEditActivity : ComponentActivity() {
                 initialRegionVarTop = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_TOP, "")
                 initialRegionVarRight = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_RIGHT, "")
                 initialRegionVarBottom = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_BOTTOM, "")
+                initialRegionVarX = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_X, "")
+                initialRegionVarY = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_Y, "")
+                initialRegionVarW = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_W, "")
+                initialRegionVarH = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_H, "")
                 initialRegionPreviewFile = bundle.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_PREVIEW_FILE, "")
                 instanceId = bundle.getString("plugin_instance_id") ?: UUID.randomUUID().toString()
             }
@@ -243,6 +251,10 @@ class ActionEditActivity : ComponentActivity() {
                     initialRegionVarTop = initialRegionVarTop,
                     initialRegionVarRight = initialRegionVarRight,
                     initialRegionVarBottom = initialRegionVarBottom,
+                    initialRegionVarX = initialRegionVarX,
+                    initialRegionVarY = initialRegionVarY,
+                    initialRegionVarW = initialRegionVarW,
+                    initialRegionVarH = initialRegionVarH,
                     initialRegionPreviewFile = initialRegionPreviewFile,
                     regionResultFlow = regionResultFlow,
                     regionPreviewFlow = regionPreviewFlow,
@@ -252,7 +264,7 @@ class ActionEditActivity : ComponentActivity() {
                     onLaunchInPlaceRegionDraw = { bitmap, restrict, left, top, right, bottom ->
                         requestInPlaceRegionDraw(bitmap, restrict, left, top, right, bottom)
                     },
-                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom, regionSpec, regionMode, regionUsePercent, regionVarLeft, regionVarTop, regionVarRight, regionVarBottom, regionPreviewFile ->
+                    onSave = { imageSource, imagePath, targetText, isRegex, isExactMatch, isIgnoreCase, restrictRegion, regionLeft, regionTop, regionRight, regionBottom, regionSpec, regionMode, regionUsePercent, regionVarLeft, regionVarTop, regionVarRight, regionVarBottom, regionVarX, regionVarY, regionVarW, regionVarH, regionPreviewFile ->
                         saveAndFinish(
                             imageSource,
                             imagePath,
@@ -272,6 +284,10 @@ class ActionEditActivity : ComponentActivity() {
                             regionVarTop,
                             regionVarRight,
                             regionVarBottom,
+                            regionVarX,
+                            regionVarY,
+                            regionVarW,
+                            regionVarH,
                             regionPreviewFile
                         )
                     },
@@ -302,6 +318,10 @@ class ActionEditActivity : ComponentActivity() {
         regionVarTop: String,
         regionVarRight: String,
         regionVarBottom: String,
+        regionVarX: String,
+        regionVarY: String,
+        regionVarW: String,
+        regionVarH: String,
         regionPreviewFile: String
     ) {
         val resultIntent = Intent()
@@ -324,6 +344,10 @@ class ActionEditActivity : ComponentActivity() {
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_TOP, regionVarTop)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_RIGHT, regionVarRight)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_BOTTOM, regionVarBottom)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_X, regionVarX)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_Y, regionVarY)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_W, regionVarW)
+            putString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_H, regionVarH)
             putString(TaskerPluginConstants.BUNDLE_KEY_REGION_PREVIEW_FILE, regionPreviewFile)
             putString("plugin_instance_id", instanceId)
         }
@@ -387,7 +411,11 @@ class ActionEditActivity : ComponentActivity() {
                     TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_LEFT,
                     TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_TOP,
                     TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_RIGHT,
-                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_BOTTOM
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_BOTTOM,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_X,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_Y,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_W,
+                    TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_H
                 )
             )
         }
@@ -421,12 +449,16 @@ fun ActionEditScreen(
     initialRegionVarTop: String,
     initialRegionVarRight: String,
     initialRegionVarBottom: String,
+    initialRegionVarX: String,
+    initialRegionVarY: String,
+    initialRegionVarW: String,
+    initialRegionVarH: String,
     initialRegionPreviewFile: String,
     regionResultFlow: StateFlow<FloatArray?>,
     regionPreviewFlow: StateFlow<String?>,
     onLaunchScreenCapture: (Boolean, String, String, String, String) -> Unit,
     onLaunchInPlaceRegionDraw: (Bitmap, Boolean, String, String, String, String) -> Unit,
-    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String, String, String, Boolean, String, String, String, String, String) -> Unit,
+    onSave: (String, String, String, Boolean, Boolean, Boolean, Boolean, String, String, String, String, String, String, Boolean, String, String, String, String, String, String, String, String, String) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
@@ -449,6 +481,10 @@ fun ActionEditScreen(
     var regionVarTop by remember { mutableStateOf(initialRegionVarTop) }
     var regionVarRight by remember { mutableStateOf(initialRegionVarRight) }
     var regionVarBottom by remember { mutableStateOf(initialRegionVarBottom) }
+    var regionVarX by remember { mutableStateOf(initialRegionVarX) }
+    var regionVarY by remember { mutableStateOf(initialRegionVarY) }
+    var regionVarW by remember { mutableStateOf(initialRegionVarW) }
+    var regionVarH by remember { mutableStateOf(initialRegionVarH) }
     var regionPreviewFile by remember { mutableStateOf(initialRegionPreviewFile) }
 
     val initialHasCustomRegion = initialRestrictRegion &&
@@ -576,6 +612,10 @@ fun ActionEditScreen(
             regionVarTop,
             regionVarRight,
             regionVarBottom,
+            regionVarX,
+            regionVarY,
+            regionVarW,
+            regionVarH,
             regionPreviewFile
         )
     }
@@ -619,6 +659,10 @@ fun ActionEditScreen(
                             regionVarTop,
                             regionVarRight,
                             regionVarBottom,
+                            regionVarX,
+                            regionVarY,
+                            regionVarW,
+                            regionVarH,
                             regionPreviewFile
                         )
                     }) {
@@ -674,6 +718,10 @@ fun ActionEditScreen(
                                 regionVarTop,
                                 regionVarRight,
                                 regionVarBottom,
+                                regionVarX,
+                                regionVarY,
+                                regionVarW,
+                                regionVarH,
                                 regionPreviewFile
                             )
                         },
@@ -1182,16 +1230,23 @@ fun ActionEditScreen(
                                 SegmentedButton(
                                     selected = regionMode == TaskerPluginConstants.REGION_MODE_SINGLE,
                                     onClick = { regionMode = TaskerPluginConstants.REGION_MODE_SINGLE },
-                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
                                 ) {
                                     Text(stringResource(R.string.region_mode_single))
                                 }
                                 SegmentedButton(
                                     selected = regionMode == TaskerPluginConstants.REGION_MODE_SEPARATE,
                                     onClick = { regionMode = TaskerPluginConstants.REGION_MODE_SEPARATE },
-                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
                                 ) {
                                     Text(stringResource(R.string.region_mode_separate))
+                                }
+                                SegmentedButton(
+                                    selected = regionMode == TaskerPluginConstants.REGION_MODE_XYWH,
+                                    onClick = { regionMode = TaskerPluginConstants.REGION_MODE_XYWH },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
+                                ) {
+                                    Text(stringResource(R.string.region_mode_xywh))
                                 }
                             }
                         }
@@ -1229,7 +1284,7 @@ fun ActionEditScreen(
                                 singleLine = true,
                                 shape = RoundedCornerShape(12.dp)
                             )
-                        } else {
+                        } else if (regionMode == TaskerPluginConstants.REGION_MODE_SEPARATE) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     RegionVarField(
@@ -1262,6 +1317,44 @@ fun ActionEditScreen(
                                 Text(
                                     text = stringResource(
                                         if (regionUsePercent) R.string.supporting_region_var_percent else R.string.supporting_region_var_px
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    RegionVarField(
+                                        value = regionVarX,
+                                        onValueChange = { regionVarX = it },
+                                        label = stringResource(R.string.label_region_var_x),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    RegionVarField(
+                                        value = regionVarY,
+                                        onValueChange = { regionVarY = it },
+                                        label = stringResource(R.string.label_region_var_y),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    RegionVarField(
+                                        value = regionVarW,
+                                        onValueChange = { regionVarW = it },
+                                        label = stringResource(R.string.label_region_var_w),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    RegionVarField(
+                                        value = regionVarH,
+                                        onValueChange = { regionVarH = it },
+                                        label = stringResource(R.string.label_region_var_h),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(
+                                        if (regionUsePercent) R.string.supporting_region_var_xywh_percent else R.string.supporting_region_var_xywh_px
                                     ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1449,10 +1542,16 @@ fun ActionEditScreen(
                         var pxRightText by remember(regionRight, baseW) { mutableStateOf(rightPx.toString()) }
                         var pxBottomText by remember(regionBottom, baseH) { mutableStateOf(bottomPx.toString()) }
 
-                        val hasRegionVariables = if (regionMode == TaskerPluginConstants.REGION_MODE_SEPARATE) {
-                            listOf(regionVarLeft, regionVarTop, regionVarRight, regionVarBottom).any { it.isNotBlank() }
-                        } else {
-                            regionSpec.isNotBlank()
+                        val hasRegionVariables = when (regionMode) {
+                            TaskerPluginConstants.REGION_MODE_SEPARATE -> {
+                                listOf(regionVarLeft, regionVarTop, regionVarRight, regionVarBottom).any { it.isNotBlank() }
+                            }
+                            TaskerPluginConstants.REGION_MODE_XYWH -> {
+                                listOf(regionVarX, regionVarY, regionVarW, regionVarH).any { it.isNotBlank() }
+                            }
+                            else -> {
+                                regionSpec.isNotBlank()
+                            }
                         }
                         if (hasRegionVariables) {
                             Text(

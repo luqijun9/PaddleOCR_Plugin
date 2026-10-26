@@ -57,6 +57,7 @@
     <string name="region_mode_title">Region Input Mode</string>
     <string name="region_mode_single">Combined</string>
     <string name="region_mode_separate">Separate</string>
+    <string name="region_mode_xywh">Origin &amp; Size</string>
     <string name="label_region_spec_px">Region Variable / Pixels (Optional)</string>
     <string name="label_region_spec_percent">Region Variable / Percent (Optional)</string>
     <string name="placeholder_region_spec_px">%ocr_region, e.g. 100,300,900,1200</string>
@@ -69,6 +70,12 @@
     <string name="label_region_var_bottom">Bottom (variable/value)</string>
     <string name="supporting_region_var_px">All four fields are required. Enter actual pixel integers; variables are supported (e.g. %left, {v=left}). Non-empty variables override the drawn region at run time.</string>
     <string name="supporting_region_var_percent">All four fields are required. Enter integer percentages (0-100); variables are supported (e.g. %left, {v=left}). Non-empty variables override the drawn region at run time.</string>
+    <string name="label_region_var_x">Origin X (variable/value)</string>
+    <string name="label_region_var_y">Origin Y (variable/value)</string>
+    <string name="label_region_var_w">Width (variable/value)</string>
+    <string name="label_region_var_h">Height (variable/value)</string>
+    <string name="supporting_region_var_xywh_px">Set origin (X, Y) and size (Width, Height) in actual pixels. Variables supported (e.g. %x, %y, %w, %h). Non-empty variables override the drawn region.</string>
+    <string name="supporting_region_var_xywh_percent">Set origin (X, Y) and size (Width, Height) in integer percentages (0-100). Variables supported (e.g. %x, %y, %w, %h). Non-empty variables override the drawn region.</string>
     <string name="region_var_override_hint">At run time, non-empty variables take priority and override the drawn/pixel-tuned region below.</string>
     <string name="floating_service_capture_btn">Tap to Capture Region</string>
     <string name="floating_service_toast_hint">Switch to target screen before tapping capture</string>

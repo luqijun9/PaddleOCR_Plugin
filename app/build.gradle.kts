@@ -94,6 +94,7 @@ dependencies {
     implementation(libs.coil.compose)
 
     debugImplementation(libs.compose.ui.tooling)
+    testImplementation(libs.junit)
 }
 
 tasks.register("copyApkAndRecordTime") {

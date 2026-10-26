@@ -32,6 +32,10 @@ class ScreenCaptureActivity : Activity() {
     private var regionVarTop: String = ""
     private var regionVarRight: String = ""
     private var regionVarBottom: String = ""
+    private var regionVarX: String = ""
+    private var regionVarY: String = ""
+    private var regionVarW: String = ""
+    private var regionVarH: String = ""
     private var pendingIntent: android.app.PendingIntent? = null
     private var fireIntent: Intent? = null
     private var isAppTest: Boolean = false
@@ -59,6 +63,10 @@ class ScreenCaptureActivity : Activity() {
         regionVarTop = intent.getStringExtra("regionVarTop") ?: ""
         regionVarRight = intent.getStringExtra("regionVarRight") ?: ""
         regionVarBottom = intent.getStringExtra("regionVarBottom") ?: ""
+        regionVarX = intent.getStringExtra("regionVarX") ?: ""
+        regionVarY = intent.getStringExtra("regionVarY") ?: ""
+        regionVarW = intent.getStringExtra("regionVarW") ?: ""
+        regionVarH = intent.getStringExtra("regionVarH") ?: ""
         pendingIntent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra("pendingIntent", android.app.PendingIntent::class.java)
         } else {
@@ -116,6 +124,10 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("regionVarTop", regionVarTop)
                     putExtra("regionVarRight", regionVarRight)
                     putExtra("regionVarBottom", regionVarBottom)
+                    putExtra("regionVarX", regionVarX)
+                    putExtra("regionVarY", regionVarY)
+                    putExtra("regionVarW", regionVarW)
+                    putExtra("regionVarH", regionVarH)
                     putExtra("pendingIntent", pendingIntent)
                     putExtra("fireIntent", fireIntent)
                     putExtra("isAppTest", isAppTest)

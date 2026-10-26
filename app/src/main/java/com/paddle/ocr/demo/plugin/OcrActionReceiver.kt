@@ -76,6 +76,10 @@ class OcrActionReceiver : BroadcastReceiver() {
         val regionVarTop = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_TOP) ?: ""
         val regionVarRight = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_RIGHT) ?: ""
         val regionVarBottom = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_BOTTOM) ?: ""
+        val regionVarX = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_X) ?: ""
+        val regionVarY = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_Y) ?: ""
+        val regionVarW = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_W) ?: ""
+        val regionVarH = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_REGION_VAR_H) ?: ""
         val imageSource = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_SOURCE) ?: TaskerPluginConstants.IMAGE_SOURCE_SCREEN_CAPTURE
         val imagePath = bundle?.getString(TaskerPluginConstants.BUNDLE_KEY_IMAGE_PATH) ?: ""
 
@@ -128,7 +132,11 @@ class OcrActionReceiver : BroadcastReceiver() {
                                 regionVarLeft = regionVarLeft,
                                 regionVarTop = regionVarTop,
                                 regionVarRight = regionVarRight,
-                                regionVarBottom = regionVarBottom
+                                regionVarBottom = regionVarBottom,
+                                regionVarX = regionVarX,
+                                regionVarY = regionVarY,
+                                regionVarW = regionVarW,
+                                regionVarH = regionVarH
                             )
                             try {
                                 if (!loadResult.bitmap.isRecycled) {
@@ -231,7 +239,11 @@ class OcrActionReceiver : BroadcastReceiver() {
                             regionVarLeft = regionVarLeft,
                             regionVarTop = regionVarTop,
                             regionVarRight = regionVarRight,
-                            regionVarBottom = regionVarBottom
+                            regionVarBottom = regionVarBottom,
+                            regionVarX = regionVarX,
+                            regionVarY = regionVarY,
+                            regionVarW = regionVarW,
+                            regionVarH = regionVarH
                         )
                         try {
                             if (!bitmap.isRecycled) bitmap.recycle()
@@ -303,6 +315,10 @@ class OcrActionReceiver : BroadcastReceiver() {
             putExtra("regionVarTop", regionVarTop)
             putExtra("regionVarRight", regionVarRight)
             putExtra("regionVarBottom", regionVarBottom)
+            putExtra("regionVarX", regionVarX)
+            putExtra("regionVarY", regionVarY)
+            putExtra("regionVarW", regionVarW)
+            putExtra("regionVarH", regionVarH)
             putExtra("pendingIntent", pendingIntent)
             putExtra("fireIntent", intent)
         }

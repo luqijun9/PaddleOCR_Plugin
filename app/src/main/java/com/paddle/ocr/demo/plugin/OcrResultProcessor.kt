@@ -172,7 +172,7 @@ object OcrResultProcessor {
         if (values.size != 4) return null
         val nums = IntArray(4)
         for (i in 0..3) {
-            val v = values[i].trim().toIntOrNull() ?: return null
+            val v = values[i].trim().toDoubleOrNull()?.toInt() ?: return null
             if (v < 0) return null
             if (usePercent && v > 100) return null
             nums[i] = v
@@ -182,22 +182,58 @@ object OcrResultProcessor {
     }
 
     /**
-     * 将变量区域（整数百分比或实际像素）换算为当前截图的像素边界；越界或空选区返回 null。
+     * 解析起点 (X, Y) 与宽高 (W, H)。
+     * 返回换算后的 [left, top, right, bottom] 边界数组。
+     * usePercent=true 时 X/Y 为 0-100，W/H 为 1-100，且 X+W<=100, Y+H<=100。
+     * usePercent=false 时为实际像素整数，W>0, H>0。
      */
-    private fun toPixelBounds(values: IntArray, bitmap: Bitmap, usePercent: Boolean): IntArray? {
-        val bW = bitmap.width
-        val bH = bitmap.height
-        if (bW <= 0 || bH <= 0) return null
+    fun parseRegionXywh(values: List<String>, usePercent: Boolean): IntArray? {
+        val effectiveValues = if (values.size == 4 && values[0].contains(Regex("[,，;；\\s]")) && values[1].isBlank() && values[2].isBlank() && values[3].isBlank()) {
+            values[0].split(Regex("[,，;；\\s]+")).filter { it.isNotEmpty() }
+        } else {
+            values
+        }
+        if (effectiveValues.size != 4) return null
+        val nums = IntArray(4)
+        for (i in 0..3) {
+            val v = effectiveValues[i].trim().toDoubleOrNull()?.toInt() ?: return null
+            if (v < 0) return null
+            nums[i] = v
+        }
+        val startX = nums[0]
+        val startY = nums[1]
+        val width = nums[2]
+        val height = nums[3]
+
+        if (width <= 0 || height <= 0) return null
+
+        if (usePercent) {
+            if (startX > 100 || startY > 100) return null
+            if (startX + width > 100 || startY + height > 100) return null
+        }
+
+        val left = startX
+        val top = startY
+        val right = startX + width
+        val bottom = startY + height
+        return intArrayOf(left, top, right, bottom)
+    }
+
+    /**
+     * 将变量区域（整数百分比或实际像素）换算为给定尺寸下的像素边界；越界或空选区返回 null。
+     */
+    fun toPixelBounds(values: IntArray, width: Int, height: Int, usePercent: Boolean): IntArray? {
+        if (width <= 0 || height <= 0) return null
 
         val left: Int
         val top: Int
         val right: Int
         val bottom: Int
         if (usePercent) {
-            left = values[0] * bW / 100
-            top = values[1] * bH / 100
-            right = values[2] * bW / 100
-            bottom = values[3] * bH / 100
+            left = values[0] * width / 100
+            top = values[1] * height / 100
+            right = values[2] * width / 100
+            bottom = values[3] * height / 100
         } else {
             left = values[0]
             top = values[1]
@@ -205,9 +241,42 @@ object OcrResultProcessor {
             bottom = values[3]
         }
 
-        if (left < 0 || top < 0 || right > bW || bottom > bH) return null
+        if (left < 0 || top < 0 || right > width || bottom > height) return null
         if (right <= left || bottom <= top) return null
         return intArrayOf(left, top, right, bottom)
+    }
+
+    private fun toPixelBounds(values: IntArray, bitmap: Bitmap, usePercent: Boolean): IntArray? {
+        return toPixelBounds(values, bitmap.width, bitmap.height, usePercent)
+    }
+
+    /**
+     * 目标匹配逻辑 (包含 / 完全匹配 / 正则 / 忽略大小写)
+     */
+    fun matchesTarget(
+        text: String,
+        targetText: String,
+        isRegex: Boolean = false,
+        isExactMatch: Boolean = false,
+        isIgnoreCase: Boolean = true
+    ): Boolean {
+        if (targetText.isEmpty()) return false
+        return if (isRegex) {
+            try {
+                val regexOptions = if (isIgnoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet()
+                if (isExactMatch) {
+                    Regex(targetText, regexOptions).matches(text)
+                } else {
+                    Regex(targetText, regexOptions).containsMatchIn(text)
+                }
+            } catch (e: Exception) {
+                false
+            }
+        } else if (isExactMatch) {
+            text.equals(targetText, ignoreCase = isIgnoreCase)
+        } else {
+            text.contains(targetText, ignoreCase = isIgnoreCase)
+        }
     }
 
     suspend fun process(
@@ -227,34 +296,57 @@ object OcrResultProcessor {
         regionVarLeft: String = "",
         regionVarTop: String = "",
         regionVarRight: String = "",
-        regionVarBottom: String = ""
+        regionVarBottom: String = "",
+        regionVarX: String = "",
+        regionVarY: String = "",
+        regionVarW: String = "",
+        regionVarH: String = ""
     ): OcrProcessResult {
         // 区域变量优先于固定边界（宿主运行时会把 Tasker/MacroDroid 变量替换为实际数值）
         var pixelBounds: IntArray? = null
         if (restrictRegion) {
-            val parsed: IntArray? = if (regionMode == TaskerPluginConstants.REGION_MODE_SEPARATE) {
-                val values = listOf(regionVarLeft, regionVarTop, regionVarRight, regionVarBottom)
-                if (values.any { it.isNotBlank() }) {
-                    parseRegionValues(values, regionUsePercent) ?: return OcrProcessResult(
-                        success = false,
-                        errorMessage = if (regionUsePercent)
-                            "分开范围变量格式无效: 左/上/右/下 需为 0-100 的整数百分比，当前: ${values.joinToString(",")}"
-                        else
-                            "分开范围变量格式无效: 左/上/右/下 需为实际像素整数，当前: ${values.joinToString(",")}"
-                    )
-                } else {
-                    null
+            val parsed: IntArray? = when (regionMode) {
+                TaskerPluginConstants.REGION_MODE_SEPARATE -> {
+                    val values = listOf(regionVarLeft, regionVarTop, regionVarRight, regionVarBottom)
+                    if (values.any { it.isNotBlank() }) {
+                        parseRegionValues(values, regionUsePercent) ?: return OcrProcessResult(
+                            success = false,
+                            errorMessage = if (regionUsePercent)
+                                "分开范围变量格式无效: 左/上/右/下 需为 0-100 的整数百分比，当前: ${values.joinToString(",")}"
+                            else
+                                "分开范围变量格式无效: 左/上/右/下 需为实际像素整数，当前: ${values.joinToString(",")}"
+                        )
+                    } else {
+                        null
+                    }
                 }
-            } else if (regionSpec.isNotBlank()) {
-                parseRegionSpec(regionSpec, regionUsePercent) ?: return OcrProcessResult(
-                    success = false,
-                    errorMessage = if (regionUsePercent)
-                        "范围变量格式无效: \"$regionSpec\"，应为 左,上,右,下 四个 0-100 的整数百分比（如 0,25,100,75）"
-                    else
-                        "范围变量格式无效: \"$regionSpec\"，应为 左,上,右,下 四个实际像素整数（如 100,300,900,1200）"
-                )
-            } else {
-                null
+                TaskerPluginConstants.REGION_MODE_XYWH -> {
+                    val values = listOf(regionVarX, regionVarY, regionVarW, regionVarH)
+                    if (values.any { it.isNotBlank() }) {
+                        parseRegionXywh(values, regionUsePercent) ?: return OcrProcessResult(
+                            success = false,
+                            errorMessage = if (regionUsePercent)
+                                "起点与宽高格式无效: 起点X/Y与宽/高需为 0-100 的整数百分比且起点+宽高不超过100%，当前: ${values.joinToString(",")}"
+                            else
+                                "起点与宽高格式无效: 起点X/Y需为>=0的像素整数，宽/高需为>0的像素整数，当前: ${values.joinToString(",")}"
+                        )
+                    } else {
+                        null
+                    }
+                }
+                else -> {
+                    if (regionSpec.isNotBlank()) {
+                        parseRegionSpec(regionSpec, regionUsePercent) ?: return OcrProcessResult(
+                            success = false,
+                            errorMessage = if (regionUsePercent)
+                                "范围变量格式无效: \"$regionSpec\"，应为 左,上,右,下 四个 0-100 的整数百分比（如 0,25,100,75）"
+                            else
+                                "范围变量格式无效: \"$regionSpec\"，应为 左,上,右,下 四个实际像素整数（如 100,300,900,1200）"
+                        )
+                    } else {
+                        null
+                    }
+                }
             }
 
             if (parsed != null) {
@@ -332,25 +424,14 @@ object OcrResultProcessor {
                 }
                 jsonArray.put(jsonObj)
 
-                // 目标匹配逻辑 (包含 / 完全匹配 / 正则 / 忽略大小写)
                 if (!matchFound && targetText.isNotEmpty()) {
-                    val isMatch = if (isRegex) {
-                        try {
-                            val regexOptions = if (isIgnoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet()
-                            if (isExactMatch) {
-                                Regex(targetText, regexOptions).matches(ocrResult.text)
-                            } else {
-                                Regex(targetText, regexOptions).containsMatchIn(ocrResult.text)
-                            }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "[$SUB_TAG] Regex syntax error: ${e.message}")
-                            false
-                        }
-                    } else if (isExactMatch) {
-                        ocrResult.text.equals(targetText, ignoreCase = isIgnoreCase)
-                    } else {
-                        ocrResult.text.contains(targetText, ignoreCase = isIgnoreCase)
-                    }
+                    val isMatch = matchesTarget(
+                        text = ocrResult.text,
+                        targetText = targetText,
+                        isRegex = isRegex,
+                        isExactMatch = isExactMatch,
+                        isIgnoreCase = isIgnoreCase
+                    )
 
                     if (isMatch) {
                         matchFound = true
