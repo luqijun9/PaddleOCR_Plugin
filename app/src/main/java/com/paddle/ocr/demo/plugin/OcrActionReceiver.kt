@@ -304,8 +304,9 @@ class OcrActionReceiver : BroadcastReceiver() {
             putExtra("regionVarRight", regionVarRight)
             putExtra("regionVarBottom", regionVarBottom)
             putExtra("pendingIntent", pendingIntent)
+            putExtra("fireIntent", intent)
         }
-        log("captureIntent created")
+        log("captureIntent created with fireIntent")
         context.startActivity(captureIntent)
         log("startActivity called, onReceive returning")
     }

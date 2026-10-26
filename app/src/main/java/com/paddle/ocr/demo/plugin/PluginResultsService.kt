@@ -23,7 +23,12 @@ class PluginResultsService : IntentService("PluginResultsService") {
             return
         }
 
-        val originalIntent = intent.getParcelableExtra<Intent>(EXTRA_ORIGINAL_INTENT)
+        val originalIntent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(EXTRA_ORIGINAL_INTENT, Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(EXTRA_ORIGINAL_INTENT)
+        }
         if (originalIntent == null) {
             log("originalIntent is missing, cannot signal finish")
             return

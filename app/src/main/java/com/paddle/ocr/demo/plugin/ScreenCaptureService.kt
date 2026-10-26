@@ -92,11 +92,22 @@ class ScreenCaptureService : Service() {
         val regionVarTop = intent.getStringExtra("regionVarTop") ?: ""
         val regionVarRight = intent.getStringExtra("regionVarRight") ?: ""
         val regionVarBottom = intent.getStringExtra("regionVarBottom") ?: ""
-        val pendingIntent: android.app.PendingIntent? = intent.getParcelableExtra("pendingIntent")
+        val pendingIntent: android.app.PendingIntent? = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra("pendingIntent", android.app.PendingIntent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra("pendingIntent")
+        }
+        val fireIntent: Intent? = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra("fireIntent", Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra("fireIntent")
+        }
         val isAppTest = intent.getBooleanExtra("isAppTest", false)
 
         log("resultCode=$resultCode")
-        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, isAppTest=$isAppTest")
+        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, isAppTest=$isAppTest, hasFireIntent=${fireIntent != null}")
         log("data action=${data.action}")
 
         if (pendingIntent != null) {
@@ -127,6 +138,7 @@ class ScreenCaptureService : Service() {
             regionVarTop = regionVarTop,
             regionVarRight = regionVarRight,
             regionVarBottom = regionVarBottom,
+            fireIntent = fireIntent,
             pendingIntent = pendingIntent,
             isAppTest = isAppTest
         )
@@ -152,6 +164,7 @@ class ScreenCaptureService : Service() {
         regionVarTop: String,
         regionVarRight: String,
         regionVarBottom: String,
+        fireIntent: Intent?,
         pendingIntent: android.app.PendingIntent?,
         isAppTest: Boolean
     ) {
@@ -191,7 +204,7 @@ class ScreenCaptureService : Service() {
             virtualDisplay?.release()
             mediaProjection?.stop()
             val errBundle = OcrProcessResult.createErrorBundle("截屏超时：5秒内未能获取屏幕图像帧")
-            signalTaskerFinish(pendingIntent, false, errBundle)
+            signalTaskerFinish(fireIntent, pendingIntent, false, errBundle)
             stopSelf()
         }
         timeoutHandler.postDelayed(timeoutRunnable, 5000)
@@ -256,6 +269,7 @@ class ScreenCaptureService : Service() {
                         regionVarTop = regionVarTop,
                         regionVarRight = regionVarRight,
                         regionVarBottom = regionVarBottom,
+                        fireIntent = fireIntent,
                         pendingIntent = pendingIntent,
                         isAppTest = isAppTest
                     )
@@ -267,7 +281,7 @@ class ScreenCaptureService : Service() {
                 PluginStatusManager.notifyFailed("截屏失败：未能获取屏幕图像")
                 scope.launch {
                     val errBundle = OcrProcessResult.createErrorBundle("截屏失败：未能获取屏幕图像")
-                    signalTaskerFinish(pendingIntent, false, errBundle)
+                    signalTaskerFinish(fireIntent, pendingIntent, false, errBundle)
                     stopSelf()
                 }
             }
@@ -293,6 +307,7 @@ class ScreenCaptureService : Service() {
         regionVarTop: String,
         regionVarRight: String,
         regionVarBottom: String,
+        fireIntent: Intent?,
         pendingIntent: android.app.PendingIntent?,
         isAppTest: Boolean
     ) {
@@ -335,33 +350,37 @@ class ScreenCaptureService : Service() {
             try {
                 if (!bitmap.isRecycled) bitmap.recycle()
             } catch (ignore: Exception) {}
-            signalTaskerFinish(pendingIntent, result.success, result.toTaskerBundle())
+            signalTaskerFinish(fireIntent, pendingIntent, result.success, result.toTaskerBundle())
         }
     }
 
-    private fun signalTaskerFinish(pendingIntent: android.app.PendingIntent?, success: Boolean, varsBundle: Bundle) {
+    private fun signalTaskerFinish(fireIntent: Intent?, pendingIntent: android.app.PendingIntent?, success: Boolean, varsBundle: Bundle) {
         log("=== signalTaskerFinish ===")
-        log("pendingIntent=$pendingIntent, success=$success, varsBundleKeys=${varsBundle.keySet()}")
-        
-        if (pendingIntent == null) {
-            log("pendingIntent is null, CANNOT signal Tasker!")
-            return
-        }
+        log("hasFireIntent=${fireIntent != null}, hasPendingIntent=${pendingIntent != null}, success=$success, varsBundleKeys=${varsBundle.keySet()}")
 
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
         log("resultCode=$resultCode")
 
-        val resultIntent = Intent().apply {
-            putExtra(PluginResultsService.EXTRA_RESULT_CODE, resultCode)
-            putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, varsBundle)
+        // 1. 直接通过 signalFinish 发送完成广播给 Tasker / MacroDroid (核心通道，同文件和无障碍模式)
+        if (fireIntent != null) {
+            val signaled = TaskerPlugin.Setting.signalFinish(this, fireIntent, resultCode, varsBundle)
+            log("ScreenCaptureService direct signalFinish signaled: $signaled")
+        } else {
+            log("fireIntent is null, cannot direct signalFinish!")
         }
 
-        try {
-            pendingIntent.send(this, 0, resultIntent)
-            log("pendingIntent sent successfully to PluginResultsService")
-        } catch (e: android.app.PendingIntent.CanceledException) {
-            log("pendingIntent CanceledException: ${e.message}")
-            e.printStackTrace()
+        // 2. 兜底尝试 pendingIntent
+        if (pendingIntent != null) {
+            val resultIntent = Intent().apply {
+                putExtra(PluginResultsService.EXTRA_RESULT_CODE, resultCode)
+                putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, varsBundle)
+            }
+            try {
+                pendingIntent.send(this, 0, resultIntent)
+                log("pendingIntent sent to PluginResultsService")
+            } catch (e: Exception) {
+                log("pendingIntent Exception: ${e.message}")
+            }
         }
     }
 

@@ -33,6 +33,7 @@ class ScreenCaptureActivity : Activity() {
     private var regionVarRight: String = ""
     private var regionVarBottom: String = ""
     private var pendingIntent: android.app.PendingIntent? = null
+    private var fireIntent: Intent? = null
     private var isAppTest: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,9 +59,20 @@ class ScreenCaptureActivity : Activity() {
         regionVarTop = intent.getStringExtra("regionVarTop") ?: ""
         regionVarRight = intent.getStringExtra("regionVarRight") ?: ""
         regionVarBottom = intent.getStringExtra("regionVarBottom") ?: ""
-        pendingIntent = intent.getParcelableExtra("pendingIntent")
+        pendingIntent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra("pendingIntent", android.app.PendingIntent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra("pendingIntent")
+        }
+        fireIntent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra("fireIntent", Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra("fireIntent")
+        }
         isAppTest = intent.getBooleanExtra("isAppTest", false)
-        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, isAppTest=$isAppTest")
+        log("targetText=$targetText, isRegex=$isRegex, isExactMatch=$isExactMatch, isIgnoreCase=$isIgnoreCase, restrictRegion=$restrictRegion, isAppTest=$isAppTest, hasFireIntent=${fireIntent != null}")
 
         if (pendingIntent == null) {
             log("pendingIntent is NULL!")
@@ -105,6 +117,7 @@ class ScreenCaptureActivity : Activity() {
                     putExtra("regionVarRight", regionVarRight)
                     putExtra("regionVarBottom", regionVarBottom)
                     putExtra("pendingIntent", pendingIntent)
+                    putExtra("fireIntent", fireIntent)
                     putExtra("isAppTest", isAppTest)
                 }
                 log("serviceIntent created, calling startForegroundService")
@@ -127,30 +140,38 @@ class ScreenCaptureActivity : Activity() {
 
     private fun signalTaskerFinish(success: Boolean, errorMessage: String? = null) {
         log("=== signalTaskerFinish (Activity) ===")
-        if (pendingIntent == null) {
-            log("pendingIntent is null, cannot signal!")
-            return
-        }
-
         val resultCode = if (success) TaskerPlugin.Setting.RESULT_CODE_OK else TaskerPlugin.Setting.RESULT_CODE_FAILED
         val varsBundle = if (success) {
             Bundle().apply {
                 putString(TaskerPlugin.Setting.VARNAME_ERROR_MESSAGE, "")
                 putString("%errmsg", "")
+                putString("errmsg", "")
             }
         } else {
             OcrProcessResult.createErrorBundle(errorMessage ?: "用户取消或拒绝了录屏授权")
         }
-        log("sending pendingIntent with resultCode=$resultCode, vars=${varsBundle.keySet()}")
-        val resultIntent = Intent().apply {
-            putExtra(PluginResultsService.EXTRA_RESULT_CODE, resultCode)
-            putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, varsBundle)
+
+        // 1. 直接通过 TaskerPlugin.Setting.signalFinish 发送完成广播给 Tasker / MacroDroid
+        if (fireIntent != null) {
+            val signaled = TaskerPlugin.Setting.signalFinish(this, fireIntent!!, resultCode, varsBundle)
+            log("Activity direct signalFinish signaled: $signaled")
+        } else {
+            log("fireIntent is null in Activity, cannot direct signalFinish!")
         }
-        try {
-            pendingIntent!!.send(this, 0, resultIntent)
-            log("pendingIntent sent successfully")
-        } catch (e: android.app.PendingIntent.CanceledException) {
-            log("pendingIntent CanceledException: ${e.message}")
+
+        // 2. 兜底尝试 pendingIntent
+        if (pendingIntent != null) {
+            log("sending pendingIntent with resultCode=$resultCode, vars=${varsBundle.keySet()}")
+            val resultIntent = Intent().apply {
+                putExtra(PluginResultsService.EXTRA_RESULT_CODE, resultCode)
+                putExtra(PluginResultsService.EXTRA_RESULT_BUNDLE, varsBundle)
+            }
+            try {
+                pendingIntent!!.send(this, 0, resultIntent)
+                log("pendingIntent sent successfully")
+            } catch (e: Exception) {
+                log("pendingIntent Exception: ${e.message}")
+            }
         }
     }
 

@@ -329,6 +329,11 @@ public class TaskerPlugin {
             String errorPrefix = "signalFinish: ";
             boolean okFlag = false;
 
+            if ( originalFireIntent == null ) {
+                Log.w( TAG, errorPrefix + "originalFireIntent is null" );
+                return false;
+            }
+
             String completionIntentString = (String) getExtraValueSafe( originalFireIntent, Setting.EXTRA_PLUGIN_COMPLETION_INTENT, String.class, "signalFinish" );
 
             if ( completionIntentString != null ) {
@@ -360,15 +365,21 @@ public class TaskerPlugin {
                                 context.startService(completionIntent);
                             }
                         } else {
+                            completionIntent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+                            if (completionIntent.getPackage() == null && completionIntent.getComponent() == null && originalFireIntent.getPackage() != null) {
+                                completionIntent.setPackage(originalFireIntent.getPackage());
+                            }
                             context.sendBroadcast(completionIntent);
                         }
 
                         okFlag = true;
                     }
-                    catch ( URISyntaxException e ) {
-                        Log.w( TAG, errorPrefix + "bad URI: " + completionIntentUri );
+                    catch ( Exception e ) {
+                        Log.w( TAG, errorPrefix + "failed to send completion intent: " + e.getMessage() );
                     }
                 }
+            } else {
+                Log.w( TAG, errorPrefix + "originalFireIntent has no EXTRA_PLUGIN_COMPLETION_INTENT" );
             }
 
             return okFlag;
